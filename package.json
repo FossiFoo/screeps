@@ -1,0 +1,41 @@
+{
+  "name": "screeps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "dependencies": {},
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-eslint": "^7.1.1",
+    "babel-jest": "^18.0.0",
+    "babel-preset-latest": "^6.16.0",
+    "eslint": "^3.12.2",
+    "eslint-config-screeps-neat-o": "^1.0.0",
+    "eslint-plugin-flowtype": "^2.29.1",
+    "flow-bin": "^0.37.0",
+    "flow-cli": "0.0.0-pre",
+    "install": "^0.8.2",
+    "jest": "^18.0.0",
+    "screeps-typescript-declarations": "^4.2.1",
+    "typedef-converter": "^0.1.4"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Fossi",
+  "jest": {
+    "automock": true,
+    "cacheDirectory": "/tmp/<path>",
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "setupFiles": ["./etc/jestsetup.js"],
+    "testPathDirs": [
+      "test",
+      "src"
+    ],
+    "notify": true,
+    "verbose": true
+  }
+}
