@@ -1,2 +1,2 @@
 /* @flow */
-module.exports = (Game : GameI);
+module.exports = (Game: GameI);
