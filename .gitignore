@@ -1,0 +1,8 @@
+.emacs.desktop
+.emacs.desktop.lock
+/coverage/
+/decls/screeps.js
+/decls/screepsConstants.js
+/node_modules/
+/sync.crt
+/sync.key
