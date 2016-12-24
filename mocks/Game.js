@@ -1,8 +1,8 @@
 /* @flow */
 
-const Spawn = require.requireActual("./Spawn.js");
-const Market = require.requireActual("./Market.js");
-const GameMap = require.requireActual("./GameMap.js");
+const Spawn = require("./Spawn.js");
+const Market = require("./Market.js");
+const GameMap = require("./GameMap.js");
 
 let Spawn1 : Spawn = new Spawn();
 

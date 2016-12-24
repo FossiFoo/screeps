@@ -1,10 +1,15 @@
-/* @flow:weak */
-jest.dontMock("../src/api/Game.js");
+/* @flow */
 
+// API
+jest.unmock("../src/api/Game.js");
+import * as Game from "../src/api/Game.js";
 
-jest.dontMock("../src/main.js");
-const dut = require("../src/main.js");
+// DUT
+jest.unmock("../src/main.js");
+import * as dut from "../src/main.js";
 
+// Mocks
+import * as Stats from "../src/stats.js";
 
 it('should export loop', function() {
     const _console  = console;
@@ -18,7 +23,26 @@ it('should export loop', function() {
 });
 
 it('should error on create', function() {
-    let err = dut.createCreep();
+    let err : ?string = dut.createCreep();
 
-    expect(err).toEqual(-99);
+    expect(err).not.toBeDefined();
+});
+
+it('should return creep name on create', function() {
+    Game.spawns['Spawn1'].createCreep.mockReturnValueOnce("foobar");
+    let err : ?string = dut.createCreep();
+
+    expect(err).toBe("foobar");
+});
+
+it('should init stats', function() {
+    dut.init();
+
+    expect(Stats.init).toBeCalled();
+});
+
+it('should record stats', function() {
+    dut.loop();
+
+    expect(Stats.recordStats).toBeCalled();
 });

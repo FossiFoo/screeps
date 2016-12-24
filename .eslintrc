@@ -8,14 +8,15 @@
   ],
   "env": {
     "node": true,
-    "es6": true
+    "es6": true,
+    "jest": true
   },
   "parserOptions": {
     "ecmaVersion": 2016,
     "sourceType": "module"
   },
   "rules": {
-    "no-console": 2
+    "no-console": 0
   },
   "globals": {
     "Game": false,

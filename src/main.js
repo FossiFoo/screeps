@@ -1,34 +1,42 @@
 "use strict"
 /* @flow */
-/* eslint-disable no-console */
 
-/* eslint-disable no-unused-vars, no-undef */
-// hack to get flow to recognize the existing "_" as lodash
-const unused = require("lodash");
-declare var _ : typeof unused;
+// get flow to recognize the existing "_" as lodash
+import typeof * as Lodash from "lodash";
+declare var _ : Lodash;
 
-const Game : GameI = require("./api/Game.js");
-/* eslint-enable no-unused-vars, no-undef */
+import type { CreepBody } from "../types/FooTypes.js";
 
-type CreepBody = BODYPART_TYPE[];
+import * as Game from "./api/Game.js";
+import * as Stats from "./stats.js";
+
 
 const CREEP_MINER_BODY : CreepBody  = [WORK, MOVE, CARRY];
 const CREEP_MINER_MEMORY = {role: "miner"};
 
-function createCreep(): number | CreepName {
-    console.error(Game);
-    return Game.spawns['Spawn1'].createCreep(CREEP_MINER_BODY, undefined, CREEP_MINER_MEMORY);
-}
-module.exports.createCreep = createCreep;
-
-module.exports.loop = function () {
-    console.log("tick");
-    let err = createCreep();
-    if (_.isString(err)) {
+export function createCreep(): ?CreepName {
+    let err: number | string = Game.spawns['Spawn1'].createCreep(CREEP_MINER_BODY, undefined, CREEP_MINER_MEMORY);
+    if (typeof err === "string") {
         console.log("creep spawned: " + err);
+        return err;
     } else {
         console.log(err);
     }
+}
+
+export function init(): void {
+    Stats.init();
+}
+
+export function loop(): void {
+
+    init();
+
+    console.log("tick");
+    createCreep();
+
+    _.isString("foo")
+
+    Stats.recordStats(Game.rooms);
     console.log("tock");
-    return err;
 }

@@ -61,5 +61,6 @@ Object.assign(global, {
     "CLAIM": "claim",
 
     "Game": require.requireActual("../mocks/Game.js"),
+    "Memory": require.requireActual("../mocks/Memory.js"),
     "_": require.requireActual("lodash")
 });

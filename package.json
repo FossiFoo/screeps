@@ -1,5 +1,5 @@
 {
-  "name": "screeps",
+  "name": "FooScreeps",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
@@ -14,6 +14,7 @@
     "eslint-plugin-flowtype": "^2.29.1",
     "flow-bin": "^0.37.0",
     "flow-cli": "0.0.0-pre",
+    "flow-typed": "^2.0.0",
     "install": "^0.8.2",
     "jest": "^18.0.0",
     "screeps-typescript-declarations": "^4.2.1",
@@ -22,7 +23,7 @@
   "scripts": {
     "test": "jest"
   },
-  "author": "Fossi",
+  "author": "FossiFoo",
   "jest": {
     "automock": true,
     "cacheDirectory": "/tmp/<path>",
@@ -30,12 +31,17 @@
     "collectCoverageFrom": [
       "src/**/*.js"
     ],
-    "setupFiles": ["./etc/jestsetup.js"],
+    "notify": true,
+    "setupFiles": [
+      "./etc/jestsetup.js"
+    ],
     "testPathDirs": [
       "test",
       "src"
     ],
-    "notify": true,
+    "testPathIgnorePatterns": [
+      "<rootDir>/.*/flycheck_.*"
+    ],
     "verbose": true
   }
 }
