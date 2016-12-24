@@ -1,4 +1,11 @@
 /* @flow */
+jest.unmock("../mocks/Game.js");
+import Game from "../mocks/Game.js";
+jest.unmock("../mocks/Memory.js");
+import {Memory} from "../mocks/Memory.js";
+jest.unmock("lodash");
+import  _ from "lodash";
+
 Object.assign(global, {
     "OK": 0,
     "ERR_NOT_OWNER": -1,
@@ -60,7 +67,7 @@ Object.assign(global, {
     "HEAL": "heal",
     "CLAIM": "claim",
 
-    "Game": require.requireActual("../mocks/Game.js"),
-    "Memory": require.requireActual("../mocks/Memory.js"),
-    "_": require.requireActual("lodash")
+    "Game": Game,
+    "Memory": Memory,
+    "_": _
 });

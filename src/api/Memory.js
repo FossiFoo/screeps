@@ -24,3 +24,4 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
 }
 
 export const Memory: FooMemory = initializeMemory(Memory);
+export default Memory;

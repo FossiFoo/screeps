@@ -2,7 +2,7 @@
 
 // API
 jest.unmock("../src/api/Game.js");
-import * as Game from "../src/api/Game.js";
+import Game from "../src/api/Game.js";
 
 // DUT
 jest.unmock("../src/main.js");
@@ -23,14 +23,14 @@ it('should export loop', function() {
 });
 
 it('should error on create', function() {
-    let err : ?string = dut.createCreep();
+    let err : ?string = dut.createCreep(Game);
 
     expect(err).not.toBeDefined();
 });
 
 it('should return creep name on create', function() {
     Game.spawns['Spawn1'].createCreep.mockReturnValueOnce("foobar");
-    let err : ?string = dut.createCreep();
+    let err : ?string = dut.createCreep(Game);
 
     expect(err).toBe("foobar");
 });

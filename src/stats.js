@@ -4,9 +4,7 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { FooMemory, RoomStats } from "../types/FooTypes.js";
-
-import * as Memory from "./api/Memory.js";
+import type { FooMemory, RoomStats, StatsMemory } from "../types/FooTypes.js";
 
 export function init(): void {
 }
@@ -17,28 +15,36 @@ export function roomStats(room: Room): RoomStats {
 
     const isMyRoom: boolean = (room.controller && room.controller.my);
     roomStats.myRoom = isMyRoom ? 1 : 0;
-    if (!isMyRoom) {
+    if (isMyRoom) {
         roomStats.energyAvailable = room.energyAvailable;
         roomStats.energyCapacityAvailable = room.energyCapacityAvailable;
         roomStats.controllerProgress = room.controller.progress;
         roomStats.controllerProgressTotal = room.controller.progressTotal;
 
-        const stored = room.storage ?  room.storage.store[RESOURCE_ENERGY] : 0;
-        /* const storedTotal =  room.storage ? room.storage.storeCapacity[RESOURCE_ENERGY] : 0;
-
-        Memory.stats['room.' + room.name + '.storedEnergy'] = stored;
-        /* Memory.stats['room.' + room.name + '.storedCapacity'] = storedTotal;*/
+        roomStats.storedEnergy = room.storage ?  room.storage.store[RESOURCE_ENERGY] : 0;
+        roomStats.storedCapacity =  room.storage ? room.storage.storeCapacity : 0; //FIXME this correct?
     }
 
     return roomStats;
 }
 
-export function recordStats(rooms: RoomMap): void {
+export function recordStats(Game: GameI, Memory: FooMemory): void {
+    Memory.stats = generateStats(Game.rooms);
+}
+
+export function generateStats(rooms: RoomMap): StatsMemory {
+
+    let stats : StatsMemory = {
+        "room": {}
+    };
 
     for (let roomKey:string in rooms) {
         let room: Room = rooms[roomKey];
+        /* console.error("!!!!!!!!");
+         * console.error(roomKey);
+         * console.error(room);*/
 
-        /* Memory.stats.room[roomKey] = roomStats(room);*/
+        stats.room[roomKey] = roomStats(room);
     }
 
     /* const spawns = Game.spawns*/
@@ -61,4 +67,6 @@ export function recordStats(rooms: RoomMap): void {
      * Memory.stats['cpu.limit'] = Game.cpu.limit
      * Memory.stats['cpu.stats'] = Game.cpu.getUsed() - lastTick
      * Memory.stats['cpu.getUsed'] = Game.cpu.getUsed()*/
+
+    return stats;
 }

@@ -1,10 +1,23 @@
 /* @flow */
 
-const Spawn = require("./Spawn.js");
-const Market = require("./Market.js");
-const GameMap = require("./GameMap.js");
+import Spawn from "./Spawn.js";
+import MockRoom from "./RoomMock.js";
+import Market from "./Market.js";
+import GameMap from "./GameMap.js";
 
-let Spawn1 : Spawn = new Spawn();
+class TestSpawn extends Spawn {
+    constructor() {
+        super();
+    }
+}
+let Spawn1 : Spawn = new TestSpawn();
+
+class TestRoom extends MockRoom {
+    constructor() {
+        super();
+    }
+}
+let Room1 : Room = new TestRoom();
 
 let cpu : CPU = {
     limit: 0,
@@ -29,7 +42,7 @@ const Game : GameI = {
     gcl: gcl,
     map: map,
     market: market,
-    rooms: {},
+    rooms: {"N0W0": Room1},
     spawns: {"Spawn1": Spawn1},
     structures: {},
     constructionSites: {},

@@ -1,2 +1,3 @@
 /* @flow */
-module.exports = (Game: GameI);
+export const GameInternal : GameI = Game;
+export default GameInternal;
