@@ -96,32 +96,32 @@ export function generateStats(
 }
 
 export function reportStats(tick: number, stats: StatsMemory) {
-    console.log(``);
-    console.log(``);
-    console.log(``);
+    console.log("");
+    console.log("");
+    console.log("");
     console.log(`= FooStats ================================`);
     console.log(`Tick: ${tick}`);
-    console.log(``);
-    console.log(``);
+    console.log("");
+    console.log("");
     console.log(`- GCL -------------------------------------`);
     console.log(`Level: ${stats.gcl.level}`);
-    console.log(``);
-    console.log(``);
+    console.log("");
+    console.log("");
     console.log(`- ROOMS -----------------------------------`);
     console.log(`Room count: ${_.size(stats.room)}`);
-    console.log(``);
-    console.log(``);
+    console.log("");
+    console.log("");
     console.log(`- SPAWNS ----------------------------------`);
     console.log(`Spawn count: ${_.size(stats.spawn)}`);
-    console.log(``);
-    console.log(``);
+    console.log("");
+    console.log("");
     console.log(`- CPU -------------------------------------`);
     console.log(`cpu limit: ${stats.cpu.limit}`);
     console.log(`tick limit: ${stats.cpu.tickLimit}`);
     console.log(`bucket: ${stats.cpu.bucket}`);
     console.log(`used: ${stats.cpu.getUsed}`);
-    console.log(``);
-    console.log(``);
+    console.log("");
+    console.log("");
     console.log(`===========================================`);
 }
 

@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { StatsMemory, OwnMemory, RoomStats, SpawnStats, GCLStats, CPUStats } from "../types/FooTypes.js";
+import type { StatsMemory, OwnMemory, MonitoringMemory, RoomStats, SpawnStats, GCLStats, CPUStats } from "../types/FooTypes.js";
 
 import _ from "lodash";
 
@@ -41,10 +41,16 @@ const validStats: StatsMemory = {
     gcl: validGCLStats,
     cpu: validCPUStats
 }
+
+const validMonitoring: MonitoringMemory = {
+    errors: []
+}
+
 const validMemory: OwnMemory = {
     initialized: true,
     finished: true,
-    stats: validStats
+    stats: validStats,
+    monitoring: validMonitoring
 };
 
 class TestController extends StructureController {

@@ -11,6 +11,8 @@ import Game from "./ApiGame";
 import Memory from "./ApiMemory";
 
 import * as Stats from "./stats";
+import * as Monitoring from "./monitoring";
+import { error } from "./monitoring";
 
 
 const CREEP_MINER_BODY : CreepBody  = [WORK, MOVE, CARRY];
@@ -20,7 +22,7 @@ export function createCreep(Game: GameI): ?CreepName {
     let returnValue: number | string = Game.spawns['Spawn1'].createCreep(CREEP_MINER_BODY, undefined, CREEP_MINER_MEMORY);
 
     if (typeof returnValue !== "string") {
-        console.error(returnValue);
+        error(returnValue);
         return;
     }
 
@@ -30,13 +32,14 @@ export function createCreep(Game: GameI): ?CreepName {
 
 export function checkCPUOverrun(mem: FooMemory): void {
     if (mem.finished !== true) {
-        console.error(`Tick did not finish: ${Game.time - 1}`);
+        error(`Tick did not finish: ${Game.time - 1}`);
     }
 }
 
 export function init(): void {
     Memory.finished = false;
     Stats.init();
+    Monitoring.init();
 }
 
 export function finish(): void {

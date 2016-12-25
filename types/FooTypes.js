@@ -30,10 +30,24 @@ export type StatsMemory = {
     cpu: CPUStats
 };
 
+export type ERRORTYPE =
+    "GENERAL";
+
+export type ErrorEntry = {
+    time: number,
+    type: ERRORTYPE,
+    msg: string
+}
+
+export type MonitoringMemory = {
+    errors: ErrorEntry[]
+}
+
 export type OwnMemory = {
     initialized: true,
     finished: boolean,
-    stats: StatsMemory
+    stats: StatsMemory,
+    monitoring: MonitoringMemory
 };
 
 export type FooMemory = OwnMemory & MemoryI;

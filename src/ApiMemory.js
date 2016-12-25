@@ -35,10 +35,13 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
             spawn: {},
             gcl: validGCLStats,
             cpu: validCPUStats
+        },
+        monitoring: {
+            errors: []
         }
     };
 
-    const assigned: FooMemory = Object.assign({}, mem, initMem);
+    const assigned: FooMemory = _.assign(mem, initMem);
     return assigned;
 }
 

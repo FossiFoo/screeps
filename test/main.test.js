@@ -12,18 +12,14 @@ import * as dut from "../src/main.js";
 
 // Mocks
 import * as Stats from "../src/stats.js";
+import * as Monitoring from "../src/monitoring.js";
 
 it('should check cpu overrun', function() {
-    const _console  = console;
-    console.error = jest.fn();
-
     Memory.finished = false;
     Game.time = 123;
     dut.loop();
 
-    expect(console.error).toBeCalled();
-
-    console = _console;
+    expect(Monitoring.error).toBeCalled();
 });
 
 it('should error on create', function() {
@@ -34,9 +30,9 @@ it('should error on create', function() {
 
 it('should return creep name on create', function() {
     Game.spawns['Spawn1'].createCreep.mockReturnValueOnce("foobar");
-    let err : ?string = dut.createCreep(Game);
+    let val : ?string = dut.createCreep(Game);
 
-    expect(err).toBe("foobar");
+    expect(val).toBe("foobar");
 });
 
 it('should init stats', function() {
