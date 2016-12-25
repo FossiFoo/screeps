@@ -32,6 +32,8 @@
       "src/**/*.js"
     ],
     "notify": true,
+    "resetMocks": true,
+    "resetModules": true,
     "setupFiles": [
       "./etc/jestsetup.js"
     ],
