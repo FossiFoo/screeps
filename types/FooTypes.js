@@ -31,8 +31,9 @@ export type StatsMemory = {
 };
 
 export type OwnMemory = {
-    "initialized": true,
-    "stats": StatsMemory
+    initialized: true,
+    finished: boolean,
+    stats: StatsMemory
 };
 
 export type FooMemory = OwnMemory & MemoryI;

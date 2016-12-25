@@ -28,6 +28,7 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
 
     const initMem : OwnMemory = {
         initialized: true,
+        finished: false,
         stats: {
             time: 0,
             room: {},

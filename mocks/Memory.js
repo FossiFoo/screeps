@@ -11,7 +11,8 @@ const MemoryMock : any = {
     flags: {},
     rooms: {},
     spawns: {"Spawn1": Spawn1},
-    initialized: undefined
+    initialized: undefined,
+    finished: undefined
 };
 
 export var Memory: FooMemory = MemoryMock;

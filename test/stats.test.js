@@ -43,6 +43,7 @@ const validStats: StatsMemory = {
 }
 const validMemory: OwnMemory = {
     initialized: true,
+    finished: true,
     stats: validStats
 };
 
