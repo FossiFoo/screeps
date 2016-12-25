@@ -41,6 +41,7 @@ export function checkCPUOverrun(mem: FooMemory): void {
 }
 
 export function init(): void {
+    /* console.log("tick: " + Game.time);*/
     Memory.finished = false;
     Stats.init();
     Monitoring.init();
@@ -48,6 +49,7 @@ export function init(): void {
 
 export function finish(): void {
     Memory.finished = true;
+    /* console.log("tock");*/
 }
 
 export function loop(): void {
@@ -56,11 +58,46 @@ export function loop(): void {
 
     init();
 
-    /* console.log("tick: " + Game.time);*/
-    createCreep(Game);
+    // === SURVIVAL ===
+    // -> low energy -> organize some energy
+    // -> defence -> fill turret, repair, build defender, all repair
+    // -> turret action
+
+    // === UPKEEP ===
+    // construct tasks
+    // - refill spawn
+    // - refill extension
+    // - refill turret
+    // - refill storage
+    // - refill container
+
+    // create creeps
+    // - worker
+    // - miner
+    // - hauler
+    // - LDH
+    // - claim
+    // - defence
+    // - offence
+
+    // === ARMY ACTION ===
+
+    // === UPGRADE ===
+    // - build extension
+    // - build container
+    // - build turret
+    // - build storage
+    // - build some road
+    // - build some wall
+    // - upgrade controller
+    // - ???
+
+    // === DEFERREDS & MAINTENANCE ===
+    // collectGarbage();
+    // path caching
+    // object caching
 
     Stats.recordStats(Game, Memory);
-    /* console.log("tock");*/
 
     finish();
 }

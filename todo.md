@@ -44,8 +44,35 @@ Todo
 Build order
 ===========
 
+- 1x Worker (work, carry, move)
+ => fill energy
+- 2x Worker (work, carry, move)
+ => upgrade controller to lvl 2
+ => 5x extension
+- Miner (1x move, Nx work)
+ => move to source/container
+- Hauler (move, carry, carry)
+ => take one source
+ => withdraw, pickup
+ => fill extension, spawn, storage, container
+- Hauler
+- Miner
+- Hauler
+ => upgrade controller to lvl 3
+- Container Source 1
+- Container Source 2
+- Turret
+ => extension
+ => extension
+- Storage
+- Roads
+ => Repair
+- LDH
+- Walls
+ => build wall
 
-
+------------------
+-> market and stuff
 
 Goals
 =====
