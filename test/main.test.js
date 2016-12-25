@@ -23,9 +23,19 @@ it('should check cpu overrun', function() {
 });
 
 it('should error on create', function() {
+    Game.spawns['Spawn1'].createCreep.mockReturnValueOnce(ERR_NOT_OWNER);
     let err : ?string = dut.createCreep(Game);
 
     expect(err).not.toBeDefined();
+    expect(Monitoring.error).toBeCalled();
+});
+
+it('should just return on spawn busy', function() {
+    Game.spawns['Spawn1'].createCreep.mockReturnValueOnce(ERR_BUSY);
+    let err : ?string = dut.createCreep(Game);
+
+    expect(err).not.toBeDefined();
+    expect(Monitoring.error).not.toBeCalled();
 });
 
 it('should return creep name on create', function() {

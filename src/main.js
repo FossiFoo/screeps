@@ -22,6 +22,10 @@ export function createCreep(Game: GameI): ?CreepName {
     let returnValue: number | string = Game.spawns['Spawn1'].createCreep(CREEP_MINER_BODY, undefined, CREEP_MINER_MEMORY);
 
     if (typeof returnValue !== "string") {
+        switch (returnValue) {
+            case ERR_BUSY: return;
+            case ERR_NOT_ENOUGH_ENERGY: return;
+        }
         error(returnValue);
         return;
     }
