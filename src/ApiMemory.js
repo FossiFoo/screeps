@@ -4,7 +4,7 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { FooMemory, OwnMemory } from "../../types/FooTypes.js";
+import type { FooMemory, OwnMemory } from "../types/FooTypes.js";
 
 export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
 
@@ -20,18 +20,20 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
 
     const validCPUStats = {
         limit: 0,
+        tickLimit: 0,
         bucket: 0,
         stats: 0,
         getUsed: 0
     }
 
     const initMem : OwnMemory = {
-        "initialized": true,
-        "stats": {
-            "room": {},
-            "spawn": {},
-            "gcl": validGCLStats,
-            "cpu": validCPUStats
+        initialized: true,
+        stats: {
+            time: 0,
+            room: {},
+            spawn: {},
+            gcl: validGCLStats,
+            cpu: validCPUStats
         }
     };
 

@@ -8,6 +8,7 @@ export type GCLStats = {
 
 export type CPUStats = {
     limit: number,
+    tickLimit: number,
     bucket: number,
     stats: number,
     getUsed: number
@@ -22,6 +23,7 @@ export type RoomStats = {
 };
 
 export type StatsMemory = {
+    time: number,
     room: {[name: string]: RoomStats},
     spawn: {[name: string]: SpawnStats},
     gcl: GCLStats,

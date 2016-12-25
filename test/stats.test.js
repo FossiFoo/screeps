@@ -5,10 +5,10 @@ import type { StatsMemory, OwnMemory, RoomStats, SpawnStats, GCLStats, CPUStats 
 import _ from "lodash";
 
 // API
-jest.unmock("../src/api/Game.js");
-import Game from "../src/api/Game.js";
-jest.unmock("../src/api/Memory.js");
-import Memory from "../src/api/Memory.js";
+jest.unmock("../src/ApiGame.js");
+import Game from "../src/ApiGame.js";
+jest.unmock("../src/ApiMemory.js");
+import Memory from "../src/ApiMemory.js";
 
 // DUT
 jest.unmock("../src/stats.js");
@@ -27,21 +27,23 @@ const validGCLStats: GCLStats = {
 }
 
 const validCPUStats: CPUStats = {
-    limit: 0,
-    bucket: 0,
-    stats: 0,
+    limit: 1,
+    tickLimit: 500,
+    bucket: 9001,
+    stats: 1,
     getUsed: 0
 }
 
 const validStats: StatsMemory = {
-    "room": {},
-    "spawn": {},
-    "gcl": validGCLStats,
-    "cpu": validCPUStats
+    time: 0,
+    room: {},
+    spawn: {},
+    gcl: validGCLStats,
+    cpu: validCPUStats
 }
 const validMemory: OwnMemory = {
-    "initialized": true,
-    "stats": validStats
+    initialized: true,
+    stats: validStats
 };
 
 class TestController extends StructureController {
@@ -78,7 +80,7 @@ const spawn: Spawn = new TestSpawn();
 const validCPU: CPU = {
     limit: 1,
     bucket: 9001,
-    tickLimit: 1,
+    tickLimit: 500,
     getUsed(): number {return 0}
 }
 
@@ -113,6 +115,7 @@ it('should generate owned spawn stats', function() {
 
 it('should generate stats', function() {
     const stats : StatsMemory = dut.generateStats(
+        1000000,
         {"N0W0": foreignRoom},
         {"Spawn1": spawn},
         validGCL,
@@ -124,7 +127,14 @@ it('should generate stats', function() {
 });
 
 it('should record stats', function() {
+    const _console  = console;
+    console.log = jest.fn();
+
+    Game.time = 1000000;
     dut.recordStats(Game, Memory);
 
+    expect(console.log).toBeCalled();
     expect(_.size(Memory.stats.room)).toBe(1);
+
+    console = _console;
 });

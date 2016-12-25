@@ -6,6 +6,8 @@ declare var _ : Lodash;
 
 import type { FooMemory, RoomStats, SpawnStats, GCLStats, CPUStats, StatsMemory, SpawnMemory } from "../types/FooTypes.js";
 
+const REPORT_FREQUENCY = 10;
+
 export function init(): void {
 }
 
@@ -56,6 +58,7 @@ export function cpuStats(cpu: CPU,  lastTick: number): CPUStats {
     const used : number = cpu.getUsed();
     return {
         "bucket": cpu.bucket,
+        "tickLimit": cpu.tickLimit,
         "limit": cpu.limit,
         "stats": used - lastTick,
         "getUsed": used
@@ -63,6 +66,7 @@ export function cpuStats(cpu: CPU,  lastTick: number): CPUStats {
 }
 
 export function generateStats(
+    time: number,
     rooms: RoomMap,
     spawns: SpawnMap,
     gcl: GlobalControlLevel,
@@ -70,6 +74,7 @@ export function generateStats(
     lastTick: number): StatsMemory {
 
     let stats = {};
+    stats.time = time;
 
     stats.room = {};
     for (let roomKey:string in rooms) {
@@ -90,7 +95,42 @@ export function generateStats(
     return stats;
 }
 
+export function reportStats(tick: number, stats: StatsMemory) {
+    console.log(``);
+    console.log(``);
+    console.log(``);
+    console.log(`= FooStats ================================`);
+    console.log(`Tick: ${tick}`);
+    console.log(``);
+    console.log(``);
+    console.log(`- GCL -------------------------------------`);
+    console.log(`Level: ${stats.gcl.level}`);
+    console.log(``);
+    console.log(``);
+    console.log(`- ROOMS -----------------------------------`);
+    console.log(`Room count: ${_.size(stats.room)}`);
+    console.log(``);
+    console.log(``);
+    console.log(`- SPAWNS ----------------------------------`);
+    console.log(`Spawn count: ${_.size(stats.spawn)}`);
+    console.log(``);
+    console.log(``);
+    console.log(`- CPU -------------------------------------`);
+    console.log(`cpu limit: ${stats.cpu.limit}`);
+    console.log(`tick limit: ${stats.cpu.tickLimit}`);
+    console.log(`bucket: ${stats.cpu.bucket}`);
+    console.log(`used: ${stats.cpu.getUsed}`);
+    console.log(``);
+    console.log(``);
+    console.log(`===========================================`);
+}
+
 export function recordStats(Game: GameI, Memory: FooMemory): void {
+    const time: number = Game.time;
+    const lastTime: number = Memory.stats.time;
     const lastTick: number = Memory.stats.cpu.getUsed;
-    Memory.stats = generateStats(Game.rooms, Game.spawns, Game.gcl, Game.cpu, lastTick);
+    Memory.stats = generateStats(time, Game.rooms, Game.spawns, Game.gcl, Game.cpu, lastTick);
+    if ((time - lastTime) > REPORT_FREQUENCY) {
+        reportStats(Game.time, Memory.stats);
+    }
 }

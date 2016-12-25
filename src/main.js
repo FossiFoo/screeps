@@ -7,10 +7,10 @@ declare var _ : Lodash;
 
 import type { CreepBody } from "../types/FooTypes.js";
 
-import Game from "./api/Game.js";
-import Memory from "./api/Memory.js";
+import Game from "./ApiGame";
+import Memory from "./ApiMemory";
 
-import * as Stats from "./stats.js";
+import * as Stats from "./stats";
 
 
 const CREEP_MINER_BODY : CreepBody  = [WORK, MOVE, CARRY];
@@ -34,7 +34,7 @@ export function loop(): void {
 
     init();
 
-    console.log("tick");
+    console.log("tick: " + Game.time);
     createCreep(Game);
 
     Stats.recordStats(Game, Memory);

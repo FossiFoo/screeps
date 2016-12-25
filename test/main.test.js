@@ -1,8 +1,8 @@
 /* @flow */
 
 // API
-jest.unmock("../src/api/Game.js");
-import Game from "../src/api/Game.js";
+jest.unmock("../src/ApiGame.js");
+import Game from "../src/ApiGame.js";
 
 // DUT
 jest.unmock("../src/main.js");
