@@ -12,10 +12,26 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
         return ((mem: any): FooMemory);
     }
 
+    const validGCLStats = {
+        level: 0,
+        progress: 0,
+        progressTotal: 0
+    }
+
+    const validCPUStats = {
+        limit: 0,
+        bucket: 0,
+        stats: 0,
+        getUsed: 0
+    }
+
     const initMem : OwnMemory = {
         "initialized": true,
         "stats": {
-            "room": {}
+            "room": {},
+            "spawn": {},
+            "gcl": validGCLStats,
+            "cpu": validCPUStats
         }
     };
 

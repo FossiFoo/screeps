@@ -4,7 +4,7 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { FooMemory, RoomStats, StatsMemory } from "../types/FooTypes.js";
+import type { FooMemory, RoomStats, SpawnStats, GCLStats, CPUStats, StatsMemory, SpawnMemory } from "../types/FooTypes.js";
 
 export function init(): void {
 }
@@ -28,45 +28,69 @@ export function roomStats(room: Room): RoomStats {
     return roomStats;
 }
 
-export function recordStats(Game: GameI, Memory: FooMemory): void {
-    Memory.stats = generateStats(Game.rooms);
+export function spawnStats(spawn: Spawn): SpawnStats {
+    const memory: SpawnMemory = spawn.memory;
+    const defenderIndex: ?number = memory && memory.defenderIndex;
+    return {
+        "defenderIndex": defenderIndex ? defenderIndex : 0
+    }
 }
 
-export function generateStats(rooms: RoomMap): StatsMemory {
-
-    let stats : StatsMemory = {
-        "room": {}
-    };
-
-    for (let roomKey:string in rooms) {
-        let room: Room = rooms[roomKey];
-        /* console.error("!!!!!!!!");
-         * console.error(roomKey);
-         * console.error(room);*/
-
-        stats.room[roomKey] = roomStats(room);
+export function gclStats(gcl: GlobalControlLevel): GCLStats {
+    return {
+        "progress": gcl.progress,
+        "progressTotal": gcl.progressTotal,
+        "level": gcl.level
     }
+}
 
-    /* const spawns = Game.spawns*/
-    /* Memory.stats['gcl.progress'] = Game.gcl.progress
-     * Memory.stats['gcl.progressTotal'] = Game.gcl.progressTotal
-     * Memory.stats['gcl.level'] = Game.gcl.level
-     * for (let spawnKey in spawns) {
-     *     let spawn = Game.spawns[spawnKey]
-     *     Memory.stats['spawn.' + spawn.name + '.defenderIndex'] = spawn.memory['defenderIndex']
-     * }
+export function cpuStats(cpu: CPU,  lastTick: number): CPUStats {
 
-     * Memory.stats['cpu.CreepManagers'] = creepManagement
+    /* Memory.stats['cpu.CreepManagers'] = creepManagement
      * Memory.stats['cpu.Towers'] = towersRunning
      * Memory.stats['cpu.Links'] = linksRunning
      * Memory.stats['cpu.SetupRoles'] = roleSetup
      * Memory.stats['cpu.Creeps'] = functionsExecutedFromCreeps
      * Memory.stats['cpu.SumProfiling'] = sumOfProfiller
-     * Memory.stats['cpu.Start'] = startOfMain
-     * Memory.stats['cpu.bucket'] = Game.cpu.bucket
-     * Memory.stats['cpu.limit'] = Game.cpu.limit
-     * Memory.stats['cpu.stats'] = Game.cpu.getUsed() - lastTick
-     * Memory.stats['cpu.getUsed'] = Game.cpu.getUsed()*/
+     * Memory.stats['cpu.Start'] = startOfMain*/
+    const used : number = cpu.getUsed();
+    return {
+        "bucket": cpu.bucket,
+        "limit": cpu.limit,
+        "stats": used - lastTick,
+        "getUsed": used
+    }
+}
+
+export function generateStats(
+    rooms: RoomMap,
+    spawns: SpawnMap,
+    gcl: GlobalControlLevel,
+    cpu: CPU,
+    lastTick: number): StatsMemory {
+
+    let stats = {};
+
+    stats.room = {};
+    for (let roomKey:string in rooms) {
+        let room: Room = rooms[roomKey];
+        stats.room[roomKey] = roomStats(room);
+    }
+
+    stats.spawn = {};
+    for (let spawnKey:string in spawns) {
+        let spawn: Spawn = spawns[spawnKey];
+        stats.spawn[spawnKey] = spawnStats(spawn);
+    }
+
+    stats.gcl = gclStats(gcl);
+
+    stats.cpu = cpuStats(cpu, lastTick);
 
     return stats;
+}
+
+export function recordStats(Game: GameI, Memory: FooMemory): void {
+    const lastTick: number = Memory.stats.cpu.getUsed;
+    Memory.stats = generateStats(Game.rooms, Game.spawns, Game.gcl, Game.cpu, lastTick);
 }
