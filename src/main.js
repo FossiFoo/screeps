@@ -1,4 +1,3 @@
-"use strict"
 /* @flow */
 
 // get flow to recognize the existing "_" as lodash
@@ -6,7 +5,7 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 // types
-import type { CreepBody, FooMemory, Task } from "../types/FooTypes.js";
+import type { CreepBody, FooMemory, Task, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
 
 // API
 import Game from "./ApiGame";
@@ -19,7 +18,7 @@ import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TASK_PRIO_MAX } from "./consts";
+import { TASK_PRIO_MAX, SourceTargets } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
@@ -68,7 +67,14 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     let creeps: CreepMap = Game.creeps; // FIXME make this room specific
     if (_.size(creeps) <= 3) {
         debug("bootup mode");
-        const harvest: Task = Tasks.constructProvisioning(Game.time, TASK_PRIO_MAX, "SOURCE_ANY");
+        const source : SourceTarget = {
+            type: SourceTargets.ANY,
+            room: room.name
+        }
+        const target : EnergyTarget = {
+            room: room.name
+        }
+        const harvest: Task = Tasks.constructProvisioning(Game.time, TASK_PRIO_MAX, source, target);
         Kernel.addTask(harvest);
     }
 }
@@ -98,13 +104,21 @@ export function loop(): void {
 
     init(Game, Memory);
 
-    let rooms: RoomMap = Game.rooms;
+    const rooms: RoomMap = Game.rooms;
     for (let roomKey:string in rooms) {
         let room: Room = rooms[roomKey];
         local(Kernel, room, Game);
     }
 
     // === GLOBAL ===
+    // assign creeps
+
+    const creeps: CreepMap = Game.creeps;
+    for (let creepKey:string in creeps) {
+        let creep: Creep = creeps[creepKey];
+        /* local(Kernel, creep, Game);*/
+    }
+
     // create creeps
     // - worker
     // - miner

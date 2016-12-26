@@ -1,14 +1,35 @@
 /* @flow */
 
-import type { Task, ProvisionTask, TaskMeta,
+import type { Task, TaskMeta,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
-              KernelMemory } from "../types/FooTypes.js";
+              KernelMemory,
+              ProvisionTask, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
 
-import { TASK_PRIO_MAX, TaskStates } from "../src/consts.js";
+import { TASK_PRIO_MAX, TaskTypes, TaskStates, SourceTargets } from "../src/consts.js";
+
+const validRoomName : RoomName = "N0W0";
+
+const validTarget : EnergyTarget = {
+    room: validRoomName
+}
+
+export const Targets = {
+    valid: validTarget
+}
+
+const validSource : SourceTarget = {
+    type: SourceTargets.ANY,
+    room: validRoomName
+}
+
+export const Sources = {
+    valid: validSource
+}
 
 const validTask : ProvisionTask = {
-    type: "PROVISION",
-    source: "SOURCE_ANY",
+    type: TaskTypes.PROVISION,
+    source: validSource,
+    target: validTarget,
     created: 0,
     updated: 0,
     prio: TASK_PRIO_MAX

@@ -8,3 +8,8 @@ export const TaskStates = {
 export const TaskTypes = {
     PROVISION: "PROVISION"
 }
+
+export const SourceTargets = {
+    ANY: "SOURCE_ANY",
+    FIXED: "SOURCE_FIXED"
+}

@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Tick, TaskPrio, SourceTarget, ProvisionTask } from "../types/FooTypes.js";
+import type { Tick, TaskPrio, ProvisionTask } from "../types/FooTypes.js";
 
 // API
 jest.unmock("../src/ApiGame.js");
@@ -20,11 +20,11 @@ import * as Monitoring from "../src/monitoring.js";
 
 // test data
 jest.unmock("../test/testdata.js");
-import { Tasks } from "../test/testdata.js";
+import { Tasks, Sources, Targets } from "../test/testdata.js";
 
 it('should construct any source task', function() {
     const time: Tick = 0;
-    const task = dut.constructProvisioning(time, TASK_PRIO_MAX, "SOURCE_ANY");
+    const task : ProvisionTask = dut.constructProvisioning(time, TASK_PRIO_MAX, Sources.valid, Targets.valid);
 
     expect(task).toEqual(Tasks.valid);
 });

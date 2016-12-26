@@ -40,6 +40,9 @@ Micro
 Todo
 ====
 
+- Improve Scheduler:
+https://en.wikipedia.org/wiki/Multilevel_feedback_queue
+a combination of fixed-priority preemptive scheduling, round-robin, and first in, first out algorithms. In this system, threads can dynamically increase or decrease in priority depending on if it has been serviced already, or if it has been waiting extensively. Every priority level is represented by its own queue, with round-robin scheduling among the high-priority threads and FIFO among the lower-priority ones. In this sense, response time is short for most threads, and short but critical system threads get completed very quickly.
 
 Build order
 ===========

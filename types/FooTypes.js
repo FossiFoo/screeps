@@ -73,13 +73,30 @@ export type TaskPrio = number;
 export type TaskType = $Keys<typeof TaskTypes>;
 
 export type SourceId = string;
+export type SourceFixed = "SOURCE_FIXED";
 export type SourceAny = "SOURCE_ANY";
 
-export type SourceTarget = SourceId | SourceAny;
+export type SourceTargetFixed = {
+    type: SourceFixed,
+    id: SourceId
+} & SourceTargetBase;
+
+export type SourceTargetAny = {
+    type: SourceAny
+} & SourceTargetBase;
+
+export type SourceTargetBase = {
+    room: RoomName;
+}
+
+export type SourceTarget = SourceTargetFixed | SourceTargetAny;
+
+export type EnergyTarget = any;
 
 export type ProvisionTask = {
     type: "PROVISION",
-    source: SourceTarget
+    source: SourceTarget,
+    target: EnergyTarget
 } & Task;
 
 export type Task = {
