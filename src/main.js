@@ -18,7 +18,7 @@ import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TASK_PRIO_MAX, SourceTargets } from "./consts";
+import { TaskPriorities, SourceTargets } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
@@ -74,7 +74,7 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
         const target : EnergyTarget = {
             room: room.name
         }
-        const harvest: Task = Tasks.constructProvisioning(Game.time, TASK_PRIO_MAX, source, target);
+        const harvest: Task = Tasks.constructProvisioning(Game.time, TaskPriorities.URGENT, source, target);
         Kernel.addTask(harvest);
     }
 }

@@ -5,7 +5,7 @@ import type { Task, TaskMeta,
               KernelMemory,
               ProvisionTask, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
 
-import { TASK_PRIO_MAX, TaskTypes, TaskStates, SourceTargets } from "../src/consts.js";
+import { TaskPriorities, TaskTypes, TaskStates, SourceTargets } from "../src/consts.js";
 
 const validRoomName : RoomName = "N0W0";
 
@@ -32,7 +32,7 @@ const validTask : ProvisionTask = {
     target: validTarget,
     created: 0,
     updated: 0,
-    prio: TASK_PRIO_MAX
+    prio: TaskPriorities.MAX
 };
 
 const validMeta : TaskMeta = {

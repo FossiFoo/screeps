@@ -8,7 +8,7 @@ import Game from "../src/ApiGame.js";
 jest.unmock("../src/ApiMemory.js");
 import Memory from "../src/ApiMemory.js";
 jest.unmock("../src/consts.js");
-import { TASK_PRIO_MAX } from "../src/consts.js";
+import { TaskPriorities } from "../src/consts.js";
 
 // DUT
 jest.unmock("../src/tasks.js");
@@ -24,7 +24,7 @@ import { Tasks, Sources, Targets } from "../test/testdata.js";
 
 it('should construct any source task', function() {
     const time: Tick = 0;
-    const task : ProvisionTask = dut.constructProvisioning(time, TASK_PRIO_MAX, Sources.valid, Targets.valid);
+    const task : ProvisionTask = dut.constructProvisioning(time, TaskPriorities.MAX, Sources.valid, Targets.valid);
 
     expect(task).toEqual(Tasks.valid);
 });
