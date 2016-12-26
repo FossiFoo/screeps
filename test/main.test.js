@@ -13,6 +13,7 @@ import * as dut from "../src/main.js";
 // Mocks
 import * as Stats from "../src/stats.js";
 import * as Monitoring from "../src/monitoring.js";
+import * as Kernel from "../src/kernel.js";
 
 it('should check cpu overrun', function() {
     Memory.finished = false;
@@ -45,10 +46,12 @@ it('should return creep name on create', function() {
     expect(val).toBe("foobar");
 });
 
-it('should init stats', function() {
-    dut.init();
+it('should init modules', function() {
+    dut.init(Game, Memory);
 
     expect(Stats.init).toBeCalled();
+    expect(Monitoring.init).toBeCalled();
+    expect(Kernel.init).toBeCalled();
 });
 
 it('should record stats', function() {

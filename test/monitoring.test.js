@@ -19,14 +19,38 @@ import RoomMock from "../mocks/RoomMock.js";
 import StructureController from "../mocks/StructureController.js";
 import Spawn from "../mocks/Spawn.js";
 
-it('should record errors', function() {
+function testLogs(fn) {
     const _console  = console;
     console.log = jest.fn();
 
-    dut.error("foo");
-
+    fn();
     expect(console.log).toBeCalled();
-    expect(_.size(Memory.monitoring.errors)).toBe(1);
 
     console = _console;
+}
+
+it('should log to console', function() {
+    testLogs(dut.consoleLog);
+});
+
+it('should record errors', function() {
+    testLogs(dut.error);
+    expect(_.size(Memory.monitoring.errors)).toBe(1);
+});
+
+it('should record warns', function() {
+    testLogs(dut.warn);
+});
+
+it('should record infos', function() {
+    testLogs(dut.info);
+});
+
+it('should record debugs', function() {
+    testLogs(dut.debug);
+});
+
+it('should record make a string', function() {
+    const msg : string = dut.makeLogMsg("TEST", "foo");
+    expect(msg).toEqual("[TEST] foo");
 });

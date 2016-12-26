@@ -9,17 +9,47 @@ import type { ErrorEntry } from "../types/FooTypes.js";
 import Game from "./ApiGame";
 import Memory from "./ApiMemory";
 
+export const DEBUG_ENABLED: boolean = true;
+
 export function init(): void {
 }
 
+export function consoleLog(...args: any[]): void {
+    /* eslint-disable no-console */
+    console.log(args);
+    /* eslint-enable no-console */
+}
+
+export function makeMsg(...args: any[]): string {
+    return "" + args[0];
+}
+
+export function makeLogMsg(level: string, ...args: any[]): string {
+    return "[" + level + "] " + makeMsg(args);
+}
+
 export function error(...args: any[]): void {
-    let msg : string = "" + args[0];
+    let msg : string = makeMsg(args);
     let err: ErrorEntry = {
         time: Game.time,
         type: "GENERAL",
         msg: msg
     }
     Memory.monitoring.errors.push(err);
-    console.log("[ERROR] " + msg);
+    consoleLog("[ERROR] " + msg);
     Game.notify(msg, 10);
+}
+
+export function warn(...args: any[]): void {
+    consoleLog(makeLogMsg("WARN", args));
+}
+
+export function info(...args: any[]): void {
+    consoleLog(makeLogMsg("INFO", args));
+}
+
+export function debug(...args: any[]): void {
+    if (DEBUG_ENABLED) {
+        consoleLog(makeLogMsg("DEBUG", args));
+    }
 }

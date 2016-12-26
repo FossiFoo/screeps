@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { StatsMemory, OwnMemory, MonitoringMemory, RoomStats, SpawnStats, GCLStats, CPUStats } from "../types/FooTypes.js";
+import type { RoomStats, SpawnStats, StatsMemory } from "../types/FooTypes.js";
 
 import _ from "lodash";
 
@@ -18,40 +18,9 @@ import * as dut from "../src/stats.js";
 import RoomMock from "../mocks/RoomMock.js";
 import StructureController from "../mocks/StructureController.js";
 import Spawn from "../mocks/Spawn.js";
+import { debug } from "../src/monitoring.js";
 
 // test data
-const validGCLStats: GCLStats = {
-    level: 0,
-    progress: 0,
-    progressTotal: 0
-}
-
-const validCPUStats: CPUStats = {
-    limit: 1,
-    tickLimit: 500,
-    bucket: 9001,
-    stats: 1,
-    getUsed: 0
-}
-
-const validStats: StatsMemory = {
-    time: 0,
-    room: {},
-    spawn: {},
-    gcl: validGCLStats,
-    cpu: validCPUStats
-}
-
-const validMonitoring: MonitoringMemory = {
-    errors: []
-}
-
-const validMemory: OwnMemory = {
-    initialized: true,
-    finished: true,
-    stats: validStats,
-    monitoring: validMonitoring
-};
 
 class TestController extends StructureController {
     constructor(own: boolean): void{
@@ -98,7 +67,7 @@ const validGCL: GlobalControlLevel = {
 }
 
 it('should init stats', function() {
-    dut.init();
+    dut.init(Game, Memory);
 });
 
 it('should generate foreign room stats', function() {
@@ -134,14 +103,9 @@ it('should generate stats', function() {
 });
 
 it('should record stats', function() {
-    const _console  = console;
-    console.log = jest.fn();
-
     Game.time = 1000000;
     dut.recordStats(Game, Memory);
 
-    expect(console.log).toBeCalled();
+    expect(debug).toBeCalled();
     expect(_.size(Memory.stats.room)).toBe(1);
-
-    console = _console;
 });

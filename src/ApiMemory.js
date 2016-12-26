@@ -29,6 +29,7 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
     const initMem : OwnMemory = {
         initialized: true,
         finished: false,
+        version: 1,
         stats: {
             time: 0,
             room: {},
@@ -38,6 +39,11 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
         },
         monitoring: {
             errors: []
+        },
+        kernel: {
+            scheduler: {
+                tasks: {}
+            }
         }
     };
 

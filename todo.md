@@ -72,7 +72,8 @@ Build order
  => build wall
 
 ------------------
--> market and stuff
+-> minerals, market and stuff
+-> SKs
 
 Goals
 =====
