@@ -46,8 +46,20 @@ it('should record infos', function() {
     testLogs(dut.info);
 });
 
-it('should record debugs', function() {
+it('should not log debugs', function() {
+    dut.setDebugEnabled(true);
     testLogs(dut.debug);
+});
+
+it('should record debugs if enabled', function() {
+    const _console  = console;
+    console.log = jest.fn();
+
+    dut.setDebugEnabled(false);
+    dut.debug();
+    expect(console.log).not.toBeCalled();
+
+    console = _console;
 });
 
 it('should record make a string', function() {

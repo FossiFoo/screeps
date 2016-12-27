@@ -4,8 +4,16 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder } from "../types/FooTypes.js";
-import  { TaskStates} from "./consts";
+import type { Task, TaskId, TaskState, TaskMeta, TaskHolder, TaskPrio,
+              Position,
+              FooMemory, KernelMemory, TaskMap  } from "../types/FooTypes.js";
+
+import { TaskStates } from "./consts";
+
+import { debug, info, error } from "./monitoring";
+
+
+import * as Creeps from "./creeps"
 
 export let Memory: KernelMemory;
 
@@ -21,9 +29,12 @@ function makeTaskHolder(id: TaskId, task: Task, meta: TaskMeta): TaskHolder {
     }
 };
 
-function makeTaskMeta(state: TaskState): TaskMeta {
+function makeTaskMeta(state: TaskState, startRoom: RoomName, startPosition: Position): TaskMeta {
     return {
-        state
+        state,
+        startRoom,
+        startPosition,
+        assigned: null
     }
 };
 
@@ -33,14 +44,42 @@ export function makeTaskId(): TaskId {
 
 export function addTask(task: Task): ?TaskId {
     const id: string = makeTaskId();
-    Memory.scheduler.tasks[id] = makeTaskHolder(id, task, makeTaskMeta(TaskStates.WAITING));
+    const meta: TaskMeta = makeTaskMeta(TaskStates.WAITING, task.assignedRoom, {x:0, y:0});
+    Memory.scheduler.tasks[id] = makeTaskHolder(id, task, meta);
     return id;
 }
 
-export function getWaiting(): ?Task {
+export function makeFnFilterLocalByStatus(localRoom: RoomName, status: TaskState): (holder: TaskHolder) => boolean {
+    return (holder: TaskHolder) => {
+        return holder.task.assignedRoom === localRoom &&
+               holder.meta.state === status
+    };
+}
+
+export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
+    // body, ticksToLive, carry, carryCapacity
+    const tasks : TaskMap = Memory.scheduler.tasks;
+    const localRoom : RoomName = room;
+    const filterFn = makeFnFilterLocalByStatus(localRoom, TaskStates.WAITING);
+    const localTasks : TaskHolder[] = _.filter(tasks, filterFn);
+    const sortedTasks : TaskHolder[] = _.sortBy(localTasks, (holder: TaskHolder): TaskPrio => holder.task.prio);
+    const first : ?TaskHolder = _.head(sortedTasks);
+    return first && first.id;
 }
 
 export function getTaskById(id: TaskId): ?Task {
     const holder : ?TaskHolder = Memory.scheduler.tasks[id];
     return holder && holder.task;
+}
+
+export function assign(id: TaskId, creep: Creep): void {
+    const holder : ?TaskHolder = Memory.scheduler.tasks[id];
+    if (!holder) {
+        error("[kernel] Task not found: " + id);
+        return;
+    }
+    info("[Kernel] assign");
+    holder.meta.assigned = creep.name;
+    holder.meta.state = TaskStates.RUNNING;
+    Creeps.assign(creep, id, holder.task);
 }

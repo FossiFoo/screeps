@@ -9,7 +9,7 @@ import type { ErrorEntry } from "../types/FooTypes.js";
 import Game from "./ApiGame";
 import Memory from "./ApiMemory";
 
-export const DEBUG_ENABLED: boolean = true;
+export let DEBUG_ENABLED: boolean = false;
 
 export function init(): void {
 }
@@ -52,4 +52,8 @@ export function debug(...args: any[]): void {
     if (DEBUG_ENABLED) {
         consoleLog(makeLogMsg("DEBUG", args));
     }
+}
+
+export function setDebugEnabled(enabled: boolean) {
+    DEBUG_ENABLED = enabled;
 }

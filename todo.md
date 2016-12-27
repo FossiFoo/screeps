@@ -4,10 +4,10 @@ Architecture
 General
 -------
 
-
 - Don't die
 - Upkeep
-- Army positioning
+- Civilian micro
+- Army micro
 - Grow
 - Deferreds
 
@@ -21,7 +21,8 @@ Macro
 -----
 
 - Plan out tasks for existing resources
-- Construct creeps according to work/energy balance
+- Assign creeps to jobs
+- Construct missing creeps according to work/energy balance
 - Try not to move
 
 Micro

@@ -1,23 +1,4 @@
-class RoomObject  {
-    // prototype: RoomObject;
-    pos: RoomPosition;
-    room: Room
-}
-
-class Structure extends RoomObject {
-    hits: number;
-    hitsMax: number;
-    id: string;
-    structureType: string;
-    destroy() {return -99;};
-    isActive() {return true;}
-    notifyWhenAttacked(enabled: boolean) {return false;}
-}
-
-class OwnedStructure extends Structure {
-    my: boolean;
-    owner: Owner
-}
+import {OwnedStructure} from "./Utils.js";
 
 class Spawn extends OwnedStructure {
     energy: number;

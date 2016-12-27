@@ -4,6 +4,11 @@ import { TaskStates, TaskTypes } from "../src/consts.js";
 
 export type Tick = number;
 
+export type Position = {
+    x: number,
+    y: number
+}
+
 export type GCLStats = {
     level: number,
     progress: number,
@@ -47,9 +52,11 @@ export type MonitoringMemory = {
     errors: ErrorEntry[]
 };
 
+export type TaskMap = {[name: TaskId]: TaskHolder};
+
 export type KernelMemory = {
     scheduler: {
-        tasks: {[taskId: TaskId]: TaskHolder}
+        tasks: TaskMap
     }
 }
 
@@ -101,6 +108,7 @@ export type ProvisionTask = {
 
 export type Task = {
     type: TaskType,
+    assignedRoom: RoomName,
     created: Tick,
     updated: Tick,
     prio: TaskPrio
@@ -111,13 +119,26 @@ export type TaskId = string;
 export type TaskState = $Keys<typeof TaskStates>;
 
 export type TaskMeta = {
-    state: TaskState
+    state: TaskState,
+    assigned: ?CreepName,
+    startRoom: RoomName,
+    startPosition: ?Position
 }
 
 export type TaskHolder = {
     id: TaskId,
     task: Task,
     meta: TaskMeta
+}
+
+export type CreepName = string;
+
+export var CREEP_MEMORY_VERSION = "0.0.1";
+export type CreepMemory = {
+    version: typeof CREEP_MEMORY_VERSION,
+    task: {
+        assignedId: ?TaskId
+    }
 }
 
 export type CreepBody = BODYPART_TYPE[];

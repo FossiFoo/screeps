@@ -107,5 +107,5 @@ it('should record stats', function() {
     dut.recordStats(Game, Memory);
 
     expect(debug).toBeCalled();
-    expect(_.size(Memory.stats.room)).toBe(1);
+    expect(_.size(Memory.stats.room)).toBe(2);
 });

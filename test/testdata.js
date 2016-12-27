@@ -28,6 +28,7 @@ export const Sources = {
 
 const validTask : ProvisionTask = {
     type: TaskTypes.PROVISION,
+    assignedRoom: validRoomName,
     source: validSource,
     target: validTarget,
     created: 0,
@@ -36,7 +37,10 @@ const validTask : ProvisionTask = {
 };
 
 const validMeta : TaskMeta = {
-    state: TaskStates.WAITING
+    state: TaskStates.WAITING,
+    assigned: null,
+    startRoom: validRoomName,
+    startPosition: null
 }
 
 export const Tasks = {

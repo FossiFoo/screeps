@@ -13,7 +13,11 @@ export const TaskPriorities = {
 }
 
 export const TaskStates = {
-    WAITING: "WAITING"
+    WAITING: "WAITING",
+    RUNNING: "RUNNING",
+    BLOCKED: "BLOCKED",
+    FINISHED: "FINISHED",
+    ABORTED: "ABORTED"
 }
 
 export const TaskTypes = {

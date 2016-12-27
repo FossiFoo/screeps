@@ -5,7 +5,7 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 // types
-import type { CreepBody, FooMemory, Task, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
+import type { CreepBody, FooMemory, Task, TaskId, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
 
 // API
 import Game from "./ApiGame";
@@ -36,11 +36,11 @@ export function createCreep(Game: GameI): ?CreepName {
             case ERR_BUSY: return;
             case ERR_NOT_ENOUGH_ENERGY: return;
         }
-        error(returnValue);
+        error("[main] spawn failed: " + returnValue);
         return;
     }
 
-    debug("creep spawned: " + returnValue);
+    debug("[main] creep spawned: " + returnValue);
     return returnValue;
 }
 
@@ -80,7 +80,7 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
 }
 
 
-export function local(Kernel: KernelType, room: Room, Game: GameI): void {
+export function generateLocalTasks(Kernel: KernelType, room: Room, Game: GameI): void {
 
     // === SURVIVAL ===
     // -> low energy -> organize some energy
@@ -98,6 +98,14 @@ export function local(Kernel: KernelType, room: Room, Game: GameI): void {
     // - refill container
 }
 
+export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI): void {
+    const room : Room = creep.room; // FIXME make this assigned room?
+    const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
+    if (task) {
+        Kernel.assign(task, creep);
+    }
+}
+
 export function loop(): void {
 
     checkCPUOverrun(Memory);
@@ -106,8 +114,8 @@ export function loop(): void {
 
     const rooms: RoomMap = Game.rooms;
     for (let roomKey:string in rooms) {
-        let room: Room = rooms[roomKey];
-        local(Kernel, room, Game);
+        const room: Room = rooms[roomKey];
+        generateLocalTasks(Kernel, room, Game);
     }
 
     // === GLOBAL ===
@@ -115,8 +123,8 @@ export function loop(): void {
 
     const creeps: CreepMap = Game.creeps;
     for (let creepKey:string in creeps) {
-        let creep: Creep = creeps[creepKey];
-        /* local(Kernel, creep, Game);*/
+        const creep: Creep = creeps[creepKey];
+        assignLocalTasks(Kernel, creep, Game);
     }
 
     // create creeps
@@ -128,7 +136,11 @@ export function loop(): void {
     // - defence
     // - offence
 
+    // === CIVILIAN ACTION ===
+
+
     // === ARMY ACTION ===
+
 
     // === UPGRADE ===
     // - build extension
