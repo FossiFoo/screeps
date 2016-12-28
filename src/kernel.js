@@ -46,6 +46,7 @@ export function addTask(task: Task): ?TaskId {
     const id: string = makeTaskId();
     const meta: TaskMeta = makeTaskMeta(TaskStates.WAITING, task.assignedRoom, {x:0, y:0});
     Memory.scheduler.tasks[id] = makeTaskHolder(id, task, meta);
+    info("[kernel] added new task " + id);
     return id;
 }
 
@@ -64,6 +65,7 @@ export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
     const localTasks : TaskHolder[] = _.filter(tasks, filterFn);
     const sortedTasks : TaskHolder[] = _.sortBy(localTasks, (holder: TaskHolder): TaskPrio => holder.task.prio);
     const first : ?TaskHolder = _.head(sortedTasks);
+    info("[Kernel] found " + (first ? first.id : "no") + " task for " + localRoom);
     return first && first.id;
 }
 
@@ -78,7 +80,7 @@ export function assign(id: TaskId, creep: Creep): void {
         error("[kernel] Task not found: " + id);
         return;
     }
-    info("[Kernel] assign");
+    info(`[Kernel] assigned ${id} to ${creep.name}`);
     holder.meta.assigned = creep.name;
     holder.meta.state = TaskStates.RUNNING;
     Creeps.assign(creep, id, holder.task);

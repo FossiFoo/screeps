@@ -51,7 +51,7 @@ export function checkCPUOverrun(mem: FooMemory): void {
 }
 
 export function init(Game: GameI, Memory: FooMemory): void {
-    /* console.log("tick: " + Game.time);*/
+    debug("tick: " + Game.time);
     Memory.finished = false;
     Stats.init(Game, Memory);
     Monitoring.init(Game, Memory);
@@ -60,13 +60,13 @@ export function init(Game: GameI, Memory: FooMemory): void {
 
 export function finish(): void {
     Memory.finished = true;
-    /* console.log("tock");*/
+    debug("tock");
 }
 
 export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     let creeps: CreepMap = Game.creeps; // FIXME make this room specific
     if (_.size(creeps) <= 3) {
-        debug("bootup mode");
+        debug("[main] bootup mode for " + room.name);
         const source : SourceTarget = {
             type: SourceTargets.ANY,
             room: room.name
@@ -81,6 +81,8 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
 
 
 export function generateLocalTasks(Kernel: KernelType, room: Room, Game: GameI): void {
+
+    debug(`generating local tasks for ${room.name}`)
 
     // === SURVIVAL ===
     // -> low energy -> organize some energy
@@ -99,6 +101,9 @@ export function generateLocalTasks(Kernel: KernelType, room: Room, Game: GameI):
 }
 
 export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI): void {
+
+    debug(`assigning local tasks to ${creep.name}`)
+
     const room : Room = creep.room; // FIXME make this assigned room?
     const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
     if (task) {
@@ -109,6 +114,7 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
 export function loop(): void {
 
     checkCPUOverrun(Memory);
+    debug()
 
     init(Game, Memory);
 

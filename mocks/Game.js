@@ -14,12 +14,13 @@ class TestSpawn extends Spawn {
 const Spawn1 : Spawn = new TestSpawn();
 
 class TestRoom extends MockRoom {
-    constructor() {
+    constructor(name: string) {
         super();
+        this.name = name;
     }
 }
-const Room1 : Room = new TestRoom();
-const Room2 : Room = new TestRoom();
+const Room1 : Room = new TestRoom("N0W0");
+const Room2 : Room = new TestRoom("N1W0");
 
 const cpu : CPU = {
     limit: 0,
@@ -61,7 +62,7 @@ const Game : GameI = {
     gcl: gcl,
     map: map,
     market: market,
-    rooms: {"N0W0": Room1, "N1W0": Room2},
+    rooms: {[Room1.name]: Room1, [Room2.name]: Room2},
     spawns: {"Spawn1": Spawn1},
     structures: {},
     constructionSites: {},

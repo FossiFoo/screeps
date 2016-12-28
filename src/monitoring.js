@@ -16,7 +16,7 @@ export function init(): void {
 
 export function consoleLog(...args: any[]): void {
     /* eslint-disable no-console */
-    console.log(args);
+    console.log.apply(console, args);
     /* eslint-enable no-console */
 }
 
