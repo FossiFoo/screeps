@@ -1,6 +1,6 @@
 /* @flow */
 
-import { TaskStates, TaskTypes, CREEP_MEMORY_VERSION } from "../src/consts.js";
+import { TaskStates, TaskTypes, CREEP_MEMORY_VERSION, CreepStates } from "../src/consts.js";
 
 export type Tick = number;
 
@@ -141,3 +141,5 @@ export type CreepMemory = {
 }
 
 export type CreepBody = BODYPART_TYPE[];
+
+export type CreepState = $Keys<typeof CreepStates>;

@@ -13,12 +13,13 @@ import Memory from "./ApiMemory";
 
 // Support
 import * as Stats from "./stats";
+import * as Creeps from "./creeps";
 import * as Monitoring from "./monitoring";
 import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TaskPriorities, SourceTargets } from "./consts";
+import { TaskPriorities, SourceTargets, CreepStates } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
@@ -104,9 +105,12 @@ export function generateLocalTasks(Kernel: KernelType, room: Room, Game: GameI):
 
 export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI): void {
 
+    if (Creeps.getState(creep) === CreepStates.BUSY) {
+        return;
+    }
+
     debug(`assigning local tasks to ${creep.name}`)
 
-    // FIXME do not assign new task if already assigned and not finished
     const room : Room = creep.room; // FIXME make this assigned room?
     const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
     if (task) {
@@ -124,7 +128,7 @@ export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game:
     if (!task) {
         return;
     }
-    // FIXME check if spawn is busy
+
     const creepBody : ?CreepBody = Kernel.designAffordableCreep(task, room);
     if (!creepBody) {
         debug("[main] no suitable body could be constructed for " + task + " in " + room.name);

@@ -31,3 +31,11 @@ export const SourceTargets = {
     ANY: "SOURCE_ANY",
     FIXED: "SOURCE_FIXED"
 }
+
+export const CreepStates = {
+    IDLE: "IDLE",
+    BLOCKED: "BLOCKED",
+    SUSPENDED: "SUSPENDED",
+    BUSY: "BUSY",
+    PANIC: "PANIC"
+}

@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { CreepMemory } from "../types/FooTypes.js";
+import type { CreepMemory, TaskId, CreepState } from "../types/FooTypes.js";
 import { CREEP_MEMORY_VERSION } from "../src/consts";
 
 // get flow to recognize the existing "_" as lodash
@@ -13,7 +13,7 @@ import Game from "../src/ApiGame.js";
 jest.unmock("../src/ApiMemory.js");
 import Memory from "../src/ApiMemory.js";
 jest.unmock("../src/consts.js")
-import { TaskStates } from "../src/consts.js";
+import { CreepStates } from "../src/consts.js";
 
 // DUT
 jest.unmock("../src/creeps.js");
@@ -61,7 +61,36 @@ it('should return initialized memory', function() {
 it('should assign task to creep', function() {
     const creep : Creep = Game.creeps["Leo"];
 
-    dut.assign(creep, "1234", Tasks.valid);
+    const taskId : TaskId = "test-manual-1234";
+    dut.assign(creep, taskId, Tasks.valid);
 
-    expect(creep.memory.task.assignedId).toBe("1234");
+    expect(creep.memory.task.assignedId).toBe(taskId);
+});
+
+it('should get the assigned task from memory', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    const taskId : TaskId = "test-manual-1234";
+    creep.memory.task.assignedId = taskId;
+
+    const id: ?TaskId = dut.getAssignedTask(creep);
+
+    expect(id).toBe(taskId);
+});
+
+it('should get the creeps state if task is assigned', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    creep.memory.task.assignedId = "test-1234";
+
+    const state: ?CreepState = dut.getState(creep);
+
+    expect(state).toBe(CreepStates.BUSY);
+});
+
+it('should get the creeps state if task is assigned', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    creep.memory.task.assignedId = null;
+
+    const state: ?CreepState = dut.getState(creep);
+
+    expect(state).toBe(CreepStates.IDLE);
 });

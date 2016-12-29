@@ -5,6 +5,8 @@ jest.unmock("../src/ApiGame.js");
 import Game from "../src/ApiGame.js";
 jest.unmock("../src/ApiMemory.js");
 import Memory from "../src/ApiMemory.js";
+jest.unmock("../src/consts.js")
+import { CreepStates } from "../src/consts.js";
 
 // DUT
 jest.unmock("../src/main.js");
@@ -15,6 +17,7 @@ import * as Stats from "../src/stats.js";
 import * as Monitoring from "../src/monitoring.js";
 import * as Kernel from "../src/kernel.js";
 import * as Tasks from "../src/tasks.js";
+import * as Creeps from "../src/creeps.js";
 
 it('should check cpu overrun', function() {
     Memory.finished = false;
@@ -77,16 +80,26 @@ it('should create provision task in bootup', function() {
     expect(Kernel.addTask).toBeCalled();
 });
 
-it('should assign task to creep', function() {
+it('should assign task to creep if idle', function() {
     ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue("test-1234");
+    ((Creeps.getState: any): JestMockFn).mockReturnValue(CreepStates.IDLE);
 
-    const room : Room = Game.rooms["N0W0"];
     const creep : Creep = Game.creeps["Flix"];
 
     dut.assignLocalTasks(Kernel, creep, Game);
 
     expect(Kernel.getLocalWaiting).toBeCalled();
     expect(Kernel.assign).toBeCalled();
+});
+
+it('should not touch creep if busy', function() {
+    const creep : Creep = Game.creeps["Flix"];
+    ((Creeps.getState: any): JestMockFn).mockReturnValue(CreepStates.BUSY);
+
+    dut.assignLocalTasks(Kernel, creep, Game);
+
+    expect(Kernel.getLocalWaiting).not.toBeCalled();
+    expect(Kernel.assign).not.toBeCalled();
 });
 
 it('should spawn a creep for a local waiting task', function() {
@@ -103,7 +116,11 @@ it('should spawn a creep for a local waiting task', function() {
 
 it('should return if spawn is busy', function() {
     const spawn : Spawn = Game.spawns["Spawn2"];
-    spawn.spawning = {};
+    spawn.spawning = {
+        name: "foo",
+        needTime: 1,
+        remainingTime: 1
+    };
     const name : ?CreepName = dut.spawnCreepsForLocalTasks(Kernel, spawn, Game);
 
     expect(name).not.toBeDefined();
