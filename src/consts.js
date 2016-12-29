@@ -1,6 +1,8 @@
 /* @flow */
 
-export const CREEP_MEMORY_VERSION = "0.0.1";
+import type { SourceAny, SourceFixed, TaskTypeProvision, CreepMemoryVersion } from "../types/ConstTypes.js"
+
+export const CREEP_MEMORY_VERSION : CreepMemoryVersion = "0.0.1";
 
 const TASK_PRIO_MAX = 1000000;
 
@@ -24,12 +26,12 @@ export const TaskStates = {
 }
 
 export const TaskTypes = {
-    PROVISION: "PROVISION"
+    PROVISION: ("PROVISION": TaskTypeProvision)
 }
 
 export const SourceTargets = {
-    ANY: "SOURCE_ANY",
-    FIXED: "SOURCE_FIXED"
+    ANY: ("SOURCE_ANY": SourceAny),
+    FIXED: ("SOURCE_FIXED": SourceFixed)
 }
 
 export const CreepStates = {
@@ -38,4 +40,9 @@ export const CreepStates = {
     SUSPENDED: "SUSPENDED",
     BUSY: "BUSY",
     PANIC: "PANIC"
+}
+
+export const EnergyTargetTypes = {
+    SPAWN: "SPAWN",
+    OTHER: "OTHER"
 }

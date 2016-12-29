@@ -4,10 +4,13 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { Task, TaskId, TaskState, TaskMeta, TaskHolder, TaskPrio, TaskType,
+import type { Predicate,
+              Task, TaskId, TaskState, TaskMeta, TaskHolder, TaskPrio, TaskType,
               Position,
               FooMemory, KernelMemory, TaskMap,
               CreepBody } from "../types/FooTypes.js";
+
+type HolderPredicate = Predicate<TaskHolder>;
 
 /* import { BODYPART_COST } from "../types/FooTypes.js";*/
 const BODYPART_COST = {
@@ -65,23 +68,31 @@ export function addTask(task: Task): ?TaskId {
     return id;
 }
 
-export function makeFnFilterLocalByStatus(localRoom: RoomName, status: TaskState): (holder: TaskHolder) => boolean {
+export function makeFnFilterLocalByStatus(localRoom: RoomName, status: TaskState): HolderPredicate {
     return (holder: TaskHolder) => {
         return holder.task.assignedRoom === localRoom &&
                holder.meta.state === status
     };
 }
 
-export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
+function filterHolders(filterFn: HolderPredicate): TaskHolder[] {
     // body, ticksToLive, carry, carryCapacity
     const tasks : TaskMap = Memory.scheduler.tasks;
-    const localRoom : RoomName = room;
-    const filterFn = makeFnFilterLocalByStatus(localRoom, TaskStates.WAITING);
     const localTasks : TaskHolder[] = _.filter(tasks, filterFn);
+    return localTasks;
+}
+
+export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
+    const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, TaskStates.WAITING));
     const sortedTasks : TaskHolder[] = _.sortBy(localTasks, (holder: TaskHolder): TaskPrio => holder.task.prio);
     const first : ?TaskHolder = _.head(sortedTasks);
-    info("[Kernel] found " + (first ? first.id : "no") + " task for " + localRoom);
+    info("[Kernel] found " + (first ? first.id : "no") + " task for " + room);
     return first && first.id;
+}
+
+export function getLocalWaitingCount(room: RoomName /* , creep: Creep*/): number {
+    const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, TaskStates.WAITING));
+    return _.size(localTasks);
 }
 
 export function getTaskById(id: TaskId): ?Task {

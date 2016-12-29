@@ -1,6 +1,9 @@
 /* @flow */
 
-import { TaskStates, TaskTypes, CREEP_MEMORY_VERSION, CreepStates } from "../src/consts.js";
+import { TaskStates, TaskTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
+import type { SourceFixed, SourceAny, TaskTypeProvision, EnergyTargetTypeSpawn, CreepMemoryVersion } from "../types/ConstTypes.js";
+
+export type Predicate<T> = (t: T) => boolean;
 
 export type Tick = number;
 
@@ -80,8 +83,6 @@ export type TaskPrio = number;
 export type TaskType = $Keys<typeof TaskTypes>;
 
 export type SourceId = string;
-export type SourceFixed = "SOURCE_FIXED";
-export type SourceAny = "SOURCE_ANY";
 
 export type SourceTargetFixed = {
     type: SourceFixed,
@@ -98,10 +99,22 @@ export type SourceTargetBase = {
 
 export type SourceTarget = SourceTargetFixed | SourceTargetAny;
 
+export type EnergyTargetTypesType = $Keys<typeof EnergyTargetTypes>;
+
+export type EnergyTargetSpawn = {
+    type: EnergyTargetTypeSpawn;
+    name: SpawnName;
+    targetId: SpawnId;
+} & EnergyTargetBase;
+
+export type EnergyTargetBase = {
+    room: RoomName;
+};
+
 export type EnergyTarget = any;
 
 export type ProvisionTask = {
-    type: "PROVISION",
+    type: TaskTypeProvision,
     source: SourceTarget,
     target: EnergyTarget
 } & Task;
@@ -134,7 +147,7 @@ export type TaskHolder = {
 export type CreepName = string;
 
 export type CreepMemory = {
-    version: typeof CREEP_MEMORY_VERSION,
+    version: CreepMemoryVersion,
     task: {
         assignedId: ?TaskId
     }

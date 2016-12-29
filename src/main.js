@@ -13,17 +13,18 @@ import Memory from "./ApiMemory";
 
 // Support
 import * as Stats from "./stats";
-import * as Creeps from "./creeps";
 import * as Monitoring from "./monitoring";
 import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TaskPriorities, SourceTargets, CreepStates } from "./consts";
+import { TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
 type KernelType = typeof Kernel;
+import * as Creeps from "./creeps";
+import * as Rooms from "./rooms";
 
 export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
     const returnValue: number | string = spawn.createCreep(creepBody);
@@ -33,11 +34,11 @@ export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
             case ERR_BUSY: return;
             case ERR_NOT_ENOUGH_ENERGY: return;
         }
-        error("[main] spawn failed: " + returnValue);
+        error("[main] ["+ spawn.name + "] create creep failed: " + returnValue);
         return;
     }
 
-    debug("[main] creep spawned: " + returnValue);
+    debug("[main] ["+ spawn.name + "] creep spawned: " + returnValue);
     return returnValue;
 }
 
@@ -61,22 +62,40 @@ export function finish(): void {
 }
 
 export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
-    let creeps: CreepMap = Game.creeps; // FIXME make this room specific
-    if (_.size(creeps) <= 3) {
-        debug("[main] bootup mode for " + room.name);
+    const creeps: CreepMap = Game.creeps; // FIXME make this room specific
+    // min workers for a starting room
+    const BOOTUP_THRESHOLD : number = 3;
+    if (_.size(creeps) <= BOOTUP_THRESHOLD) {
+        debug("[main] [" + room.name + "] bootup mode active");
 
-        //FIXME check for pending tasks
-        /* const task : number = Kernel.getLocalWaitingCount(room.name);*/
+        const openTaskCount : number = Kernel.getLocalWaitingCount(room.name); // FIXME check better
+        if (openTaskCount > 1) {
+            debug("[main] [" + room.name + "] [bootup] has too many pending jobs");
+            return;
+        }
 
-        // construct a task to harvest some energy from anywhere
+        const spawns : Spawn[] = Rooms.getSpawns(room);
+        if (!spawns) {
+            warn("[main] [" + room.name + "] has no spawn");
+            return;
+        }
+
+        // simply use first spawn
+        const spawn : Spawn = spawns[0];
+
+        // construct a task to harvest some energy from anywhere and fill a spawn
         const source : SourceTarget = {
             type: SourceTargets.ANY,
             room: room.name
         }
         const target : EnergyTarget = {
-            room: room.name
+            room: room.name,
+            type: EnergyTargetTypes.SPAWN,
+            name: spawn.name,
+            targetId: spawn.id
         }
         const harvest: Task = Tasks.constructProvisioning(Game.time, TaskPriorities.URGENT, source, target);
+
         Kernel.addTask(harvest);
     }
 }
@@ -140,7 +159,6 @@ export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game:
 export function loop(): void {
 
     checkCPUOverrun(Memory);
-    debug()
 
     init(Game, Memory);
 

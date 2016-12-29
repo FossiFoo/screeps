@@ -113,6 +113,36 @@ it('should get local waiting task', function() {
     expect(task).toEqual(validTask);
 });
 
+it('should get count of local waiting tasks', function() {
+    // local waiting
+    Memory.kernel.scheduler.tasks = {};
+    const validId : TaskId = "test-task-valid-1234";
+    const otherValidId : TaskId = "test-task-valid-1235";
+    const validTask : Task = Tasks.valid;
+    Memory.kernel.scheduler.tasks[validId] = {id: validId, task: validTask, meta: Tasks.validMeta};
+    Memory.kernel.scheduler.tasks[otherValidId] = {id: otherValidId, task: validTask, meta: Tasks.validMeta};
+
+    // local running
+    const runningId : TaskId = "test-task-running-1236";
+    const runningTask : Task = Tasks.valid;
+    const runningMeta: TaskMeta = _.cloneDeep(Tasks.validMeta);
+    runningMeta.state = TaskStates.RUNNING;
+    Memory.kernel.scheduler.tasks[runningId] = {id: "", task: runningTask, meta: runningMeta};
+
+    // remote waiting
+    const remoteId : TaskId = "test-task-remote-1235";
+    const remoteTask : Task = _.cloneDeep(Tasks.valid);
+    remoteTask.assignedRoom = "N0E99";
+    Memory.kernel.scheduler.tasks[remoteId] = {id: remoteId, task: remoteTask, meta: Tasks.validMeta};
+
+    dut.init(Game, Memory);
+
+    const room : RoomName = "N0W0";
+    const taskCount : number = dut.getLocalWaitingCount(room);
+
+    expect(taskCount).toBe(2);
+});
+
 it('should assign task to creep', function() {
     const id : TaskId = "test-task-1234";
     const mockTask : Task = Tasks.valid;

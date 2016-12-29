@@ -18,6 +18,7 @@ import * as Monitoring from "../src/monitoring.js";
 import * as Kernel from "../src/kernel.js";
 import * as Tasks from "../src/tasks.js";
 import * as Creeps from "../src/creeps.js";
+import * as Rooms from "../src/rooms.js";
 
 it('should check cpu overrun', function() {
     Memory.finished = false;
@@ -72,12 +73,24 @@ it('should record stats', function() {
 
 
 it('should create provision task in bootup', function() {
-    const room : Room = Game.rooms["N0W0"];
+    ((Kernel.getLocalWaitingCount: any): JestMockFn).mockReturnValue(1);
+    ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([Game.spawns["Spawn1"]]);
 
+    const room : Room = Game.rooms["N0W0"];
     dut.bootup(Kernel, room, Game);
 
     expect(Tasks.constructProvisioning).toBeCalled();
     expect(Kernel.addTask).toBeCalled();
+});
+
+it('should not create task if too many already in bootup', function() {
+    ((Kernel.getLocalWaitingCount: any): JestMockFn).mockReturnValue(3);
+    const room : Room = Game.rooms["N0W0"];
+
+    dut.bootup(Kernel, room, Game);
+
+    expect(Tasks.constructProvisioning).not.toBeCalled();
+    expect(Kernel.addTask).not.toBeCalled();
 });
 
 it('should assign task to creep if idle', function() {
