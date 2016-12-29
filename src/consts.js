@@ -1,4 +1,7 @@
 /* @flow */
+
+export const CREEP_MEMORY_VERSION = "0.0.1";
+
 const TASK_PRIO_MAX = 1000000;
 
 export const TaskPriorities = {

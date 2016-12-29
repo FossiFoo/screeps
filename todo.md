@@ -76,6 +76,7 @@ Build order
  => build wall
 
 ------------------
+-> claim another room (level 6?)
 -> minerals, market and stuff
 -> SKs
 
@@ -91,3 +92,38 @@ Goals
 - Buy 10k energy on the market
 - Kill a Source Keeper
 - Completely deplete a source in a  source keeper room
+
+Energy levels
+=============
+
+1 - 300
+2 - 300 +  5 * 50 =  550
+3 - 300 + 10 * 50 =  800
+4 - 300 + 20 * 50 = 1300
+
+Bodies
+======
+
+Worker
+------
+1x WORK + Nx (1x CARRY, 1x MOVE)
+
+- L1 [WORK, CARRY, CARRY, MOVE, MOVE]
+
+Miners
+------
+5x WORK + 1x MOVE (+ CARRY + MOVE)
+
+- L2 [WORK, WORK, WORK, WORK, MOVE]
+
+Hauler
+------
+
+2x CARRY, 1x MOVE
+
+- L1 [CARRY, CARRY, MOVE]
+
+// - LDH
+// - claim
+// - defence
+// - offence

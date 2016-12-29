@@ -2,7 +2,7 @@
 
 import type { Task, TaskId, TaskState, TaskPrio,
               CreepMemory } from "../types/FooTypes.js";
-import { CREEP_MEMORY_VERSION } from "../types/FooTypes.js";
+import { CREEP_MEMORY_VERSION } from "./consts";
 
 // get flow to recognize the existing "_" as lodash
 import typeof * as Lodash from "lodash";

@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Task, TaskMeta,
+import type { Task, TaskMeta, TaskHolder,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
               KernelMemory,
               ProvisionTask, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
@@ -43,9 +43,27 @@ const validMeta : TaskMeta = {
     startPosition: null
 }
 
+const validHolder : TaskHolder = {
+    id: "test-1234",
+    task: validTask,
+    meta: validMeta
+}
+
+export const invalidTypeUnknown = {
+    type: "UNKNOWN",
+    assignedRoom: validRoomName,
+    source: validSource,
+    target: validTarget,
+    created: 0,
+    updated: 0,
+    prio: TaskPriorities.MAX
+}
+
 export const Tasks = {
     valid: validTask,
-    validMeta: validMeta
+    invalidTypeUnknown: ((invalidTypeUnknown: any): Task),
+    validMeta: validMeta,
+    validHolder: validHolder,
 }
 
 const validGCLStats: GCLStats = {

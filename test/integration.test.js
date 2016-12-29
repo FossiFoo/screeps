@@ -23,7 +23,7 @@ xit('should run a few ticks', function() {
     Memory.finished = true;
     Monitoring.setDebugEnabled(true);
 
-    for (let a: number = 0; a < 3; a++ ) {
+    for (let a: number = 0; a < 2; a++ ) {
         Game.time = a;
         dut.loop();
     }

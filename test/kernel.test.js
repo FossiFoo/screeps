@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder } from "../types/FooTypes.js";
+import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder, CreepBody } from "../types/FooTypes.js";
 
 // get flow to recognize the existing "_" as lodash
 import typeof * as Lodash from "lodash";
@@ -137,4 +137,51 @@ it('should error on assigning unknown id', function() {
     dut.assign("unknown", creep);
 
     expect(Monitoring.error).toBeCalled();
+});
+
+function checkWorkerBody(energy: number, body: ?CreepBody): void {
+    const design : ?CreepBody = dut.designAffordableWorker(energy);
+    expect(design).toEqual(body);
+}
+
+it('should construct affordable workers', function() {
+    checkWorkerBody(0, null);
+    checkWorkerBody(199, null);
+    checkWorkerBody(200, [WORK, CARRY, MOVE]);
+    checkWorkerBody(250, [WORK, CARRY, MOVE]);
+    checkWorkerBody(300, [WORK, CARRY, MOVE, CARRY, MOVE]);
+});
+
+it('should error if task is unknown', function() {
+    const taskId : TaskId = "test-1234";
+    const room : Room = Game.rooms["N0W0"];
+
+    const design : ?CreepBody = dut.designAffordableCreep(taskId, room);
+    expect(design).toBeNull();
+    expect(Monitoring.error).toBeCalled();
+});
+
+it('should error if task type is unknown', function() {
+    const id : TaskId = "test-task-1234";
+    const mockTask : Task = Tasks.invalidTypeUnknown;
+
+    Memory.kernel.scheduler.tasks[id] = {id, task: mockTask, meta: Tasks.validMeta};
+    const room : Room = Game.rooms["N0W0"];
+
+    const design : ?CreepBody = dut.designAffordableCreep(id, room);
+
+    expect(design).toBeNull();
+    expect(Monitoring.error).toBeCalled();
+});
+
+
+it('should design an affordable creep according to task', function() {
+    const id : TaskId = "test-task-1234";
+    const mockTask : Task = Tasks.valid;
+
+    Memory.kernel.scheduler.tasks[id] = {id, task: mockTask, meta: Tasks.validMeta};
+    const room : Room = Game.rooms["N0W0"];
+
+    const design : ?CreepBody = dut.designAffordableCreep(id, room);
+    expect(design).toEqual([WORK, CARRY, MOVE, CARRY, MOVE]);
 });

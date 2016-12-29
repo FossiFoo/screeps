@@ -24,12 +24,8 @@ import { TaskPriorities, SourceTargets } from "./consts";
 import * as Kernel from "./kernel";
 type KernelType = typeof Kernel;
 
-
-const CREEP_MINER_BODY : CreepBody  = [WORK, MOVE, CARRY];
-const CREEP_MINER_MEMORY = {role: "miner"};
-
-export function createCreep(Game: GameI): ?CreepName {
-    let returnValue: number | string = Game.spawns['Spawn1'].createCreep(CREEP_MINER_BODY, undefined, CREEP_MINER_MEMORY);
+export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
+    const returnValue: number | string = spawn.createCreep(creepBody);
 
     if (typeof returnValue !== "string") {
         switch (returnValue) {
@@ -67,6 +63,11 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     let creeps: CreepMap = Game.creeps; // FIXME make this room specific
     if (_.size(creeps) <= 3) {
         debug("[main] bootup mode for " + room.name);
+
+        //FIXME check for pending tasks
+        /* const task : number = Kernel.getLocalWaitingCount(room.name);*/
+
+        // construct a task to harvest some energy from anywhere
         const source : SourceTarget = {
             type: SourceTargets.ANY,
             room: room.name
@@ -85,6 +86,7 @@ export function generateLocalTasks(Kernel: KernelType, room: Room, Game: GameI):
     debug(`generating local tasks for ${room.name}`)
 
     // === SURVIVAL ===
+    // -> no spawn -> rebuild or abandon
     // -> low energy -> organize some energy
     bootup(Kernel, room, Game);
     // -> defence -> fill turret, repair, build defender, all repair
@@ -104,11 +106,31 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
 
     debug(`assigning local tasks to ${creep.name}`)
 
+    // FIXME do not assign new task if already assigned and not finished
     const room : Room = creep.room; // FIXME make this assigned room?
     const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
     if (task) {
         Kernel.assign(task, creep);
     }
+}
+
+export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game: GameI): ?CreepName {
+    if (spawn.spawning) {
+        return;
+    }
+
+    const room: Room = spawn.room;
+    const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
+    if (!task) {
+        return;
+    }
+    // FIXME check if spawn is busy
+    const creepBody : ?CreepBody = Kernel.designAffordableCreep(task, room);
+    if (!creepBody) {
+        debug("[main] no suitable body could be constructed for " + task + " in " + room.name);
+        return;
+    }
+    return createCreep(spawn, creepBody);
 }
 
 export function loop(): void {
@@ -119,7 +141,7 @@ export function loop(): void {
     init(Game, Memory);
 
     const rooms: RoomMap = Game.rooms;
-    for (let roomKey:string in rooms) {
+    for (let roomKey: string in rooms) {
         const room: Room = rooms[roomKey];
         generateLocalTasks(Kernel, room, Game);
     }
@@ -128,12 +150,19 @@ export function loop(): void {
     // assign creeps
 
     const creeps: CreepMap = Game.creeps;
-    for (let creepKey:string in creeps) {
+    for (let creepKey: string in creeps) {
         const creep: Creep = creeps[creepKey];
         assignLocalTasks(Kernel, creep, Game);
     }
 
     // create creeps
+    const spawns: SpawnMap = Game.spawns;
+    for (let spawnKey: string in spawns) {
+        const spawn: Spawn = spawns[spawnKey];
+        spawnCreepsForLocalTasks(Kernel, spawn, Game);
+    }
+
+    // === CIVILIAN ACTION ===
     // - worker
     // - miner
     // - hauler
@@ -141,8 +170,6 @@ export function loop(): void {
     // - claim
     // - defence
     // - offence
-
-    // === CIVILIAN ACTION ===
 
 
     // === ARMY ACTION ===
