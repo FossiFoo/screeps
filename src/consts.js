@@ -29,6 +29,11 @@ export const TaskTypes = {
     PROVISION: ("PROVISION": TaskTypeProvision)
 }
 
+export const TaskStepTypes = {
+    NOOP: "NOOP",
+    NAVIGATE: "NAVIGATE"
+}
+
 export const SourceTargets = {
     ANY: ("SOURCE_ANY": SourceAny),
     FIXED: ("SOURCE_FIXED": SourceFixed)

@@ -22,7 +22,7 @@ jest.unmock("../src/tasks.js");
 jest.unmock("../src/creeps.js");
 jest.unmock("../src/rooms.js");
 
-it('should run a few ticks', function() {
+xit('should run a few ticks', function() {
     Memory.finished = true;
     Monitoring.setDebugEnabled(true);
 

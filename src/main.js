@@ -128,13 +128,15 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
         return;
     }
 
-    debug(`assigning local tasks to ${creep.name}`)
+    debug(`assigning local tasks to ${creep.name}`);
 
     const room : Room = creep.room; // FIXME make this assigned room?
     const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
-    if (task) {
-        Kernel.assign(task, creep);
+    if (!task) {
+        //FIXME look for task somewhere else or recycle
+        return;
     }
+    Kernel.assign(task, creep);
 }
 
 export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game: GameI): ?CreepName {
@@ -156,6 +158,27 @@ export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game:
     return createCreep(spawn, creepBody);
 }
 
+export function processTasks(Kernel: KernelType, creep: Creep, Game: GameI) {
+
+    if (creep.spawning) {
+        return;
+    }
+
+    if (Creeps.getState(creep) === CreepStates.IDLE) {
+        warn("[main] [" + creep.name +"] is idle")
+        return;
+    }
+
+    debug(`processing task for ${creep.name}`);
+
+    Kernel.processTask(creep);
+    // - worker
+    // - miner
+    // - hauler
+    // - LDH
+    // - claim
+}
+
 export function loop(): void {
 
     checkCPUOverrun(Memory);
@@ -163,6 +186,9 @@ export function loop(): void {
     init(Game, Memory);
 
     const rooms: RoomMap = Game.rooms;
+    const creeps: CreepMap = Game.creeps;
+    const spawns: SpawnMap = Game.spawns;
+
     for (let roomKey: string in rooms) {
         const room: Room = rooms[roomKey];
         generateLocalTasks(Kernel, room, Game);
@@ -171,30 +197,26 @@ export function loop(): void {
     // === GLOBAL ===
     // assign creeps
 
-    const creeps: CreepMap = Game.creeps;
     for (let creepKey: string in creeps) {
         const creep: Creep = creeps[creepKey];
         assignLocalTasks(Kernel, creep, Game);
     }
 
     // create creeps
-    const spawns: SpawnMap = Game.spawns;
     for (let spawnKey: string in spawns) {
         const spawn: Spawn = spawns[spawnKey];
         spawnCreepsForLocalTasks(Kernel, spawn, Game);
     }
 
     // === CIVILIAN ACTION ===
-    // - worker
-    // - miner
-    // - hauler
-    // - LDH
-    // - claim
-    // - defence
-    // - offence
-
+    for (let creepKey: string in creeps) {
+        const creep: Creep = creeps[creepKey];
+        processTasks(Kernel, creep, Game);
+    }
 
     // === ARMY ACTION ===
+    // - defence
+    // - offence
 
 
     // === UPGRADE ===

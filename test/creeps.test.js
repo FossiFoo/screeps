@@ -94,3 +94,33 @@ it('should get the creeps state if task is assigned', function() {
 
     expect(state).toBe(CreepStates.IDLE);
 });
+
+it('should call task processing according to type', function() {
+    const creep : Creep = Game.creeps["Leo"];
+
+    const result = dut.processTaskStep(creep, {type: "NOOP"});
+
+    expect(creep.say).toBeCalled();
+});
+
+it('should move the creep on a navigation step', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    creep.moveTo.mockReturnValueOnce(OK);
+    dut.memory(creep).task.assignedId = "test-1234";
+
+    const result = dut.navigate(creep, Tasks.validStep);
+
+    expect(creep.moveTo).toBeCalled();
+    expect(result.success).toBeTruthy();
+});
+
+it('should error if creep cant move on a navigation step', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    creep.moveTo.mockReturnValueOnce(ERR_TIRED);
+    dut.memory(creep).task.assignedId = "test-1234";
+
+    const result = dut.navigate(creep, Tasks.validStep);
+
+    expect(Monitoring.warn).toBeCalled();
+    expect(result.error).toBe("" + ERR_TIRED);
+});

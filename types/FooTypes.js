@@ -1,6 +1,6 @@
 /* @flow */
 
-import { TaskStates, TaskTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
+import { TaskStates, TaskTypes, TaskStepTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
 import type { SourceFixed, SourceAny, TaskTypeProvision, EnergyTargetTypeSpawn, CreepMemoryVersion } from "../types/ConstTypes.js";
 
 export type Predicate<T> = (t: T) => boolean;
@@ -117,15 +117,17 @@ export type ProvisionTask = {
     type: TaskTypeProvision,
     source: SourceTarget,
     target: EnergyTarget
-} & Task;
+} & TaskBase;
 
-export type Task = {
+export type TaskBase = {
     type: TaskType,
     assignedRoom: RoomName,
     created: Tick,
     updated: Tick,
     prio: TaskPrio
 };
+
+export type Task = ProvisionTask;
 
 export type TaskId = string;
 
@@ -156,3 +158,26 @@ export type CreepMemory = {
 export type CreepBody = BODYPART_TYPE[];
 
 export type CreepState = $Keys<typeof CreepStates>;
+
+export type TaskStepResult = {
+    error?: string;
+    success?: any;
+}
+
+export type TaskStepType = $Keys<typeof TaskStepTypes>;
+
+export type TaskStep = {
+    type: TaskStepType
+};
+
+export type TaskStepNavigate = {
+    type: "NAVIGATE",
+    destination: {
+        room: RoomName,
+        position: Position
+    }
+} & TaskStep;
+
+export type TaskStepNoop = {
+    type: "NOOP"
+} & TaskStep;

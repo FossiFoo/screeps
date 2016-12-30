@@ -12,6 +12,7 @@ General
 - Deferreds
 
 - Garbage Collection
+- Idle/Stuck detection (count ticks?)
 - Path caching
 - Object caching
 - CPU and other stats

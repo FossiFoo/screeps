@@ -6,6 +6,7 @@ declare var _ : Lodash;
 
 import type { Predicate,
               Task, TaskId, TaskState, TaskMeta, TaskHolder, TaskPrio, TaskType,
+              TaskStep, TaskStepResult,
               Position,
               FooMemory, KernelMemory, TaskMap,
               CreepBody } from "../types/FooTypes.js";
@@ -30,7 +31,8 @@ import { TaskStates, TaskTypes } from "./consts";
 import { debug, info, error } from "./monitoring";
 
 
-import * as Creeps from "./creeps"
+import * as Creeps from "./creeps";
+import * as Tasks from "./tasks";
 
 export let Memory: KernelMemory;
 
@@ -137,7 +139,7 @@ export function designAffordableWorker(maxEnergy: number): ?CreepBody {
 }
 
 export function designAffordableCreep(taskId: TaskId, room: Room): ?CreepBody {
-    const holder : ?TaskHolder = getHolderById(taskId, room);
+    const holder : ?TaskHolder = getHolderById(taskId);
     if (!holder) {
         return null;
     }
@@ -151,4 +153,29 @@ export function designAffordableCreep(taskId: TaskId, room: Room): ?CreepBody {
     }
     error("[kernel] task type not known " + taskType);
     return null;
+}
+
+export function processTask(creep: Creep): void {
+    const taskId : ?TaskId = Creeps.getAssignedTask(creep);
+    if (!taskId) {
+        error("[kernel] [" + creep.name + "] has no task");
+        return;
+    }
+    const holder : ?TaskHolder = getHolderById(taskId);
+    if (!holder) {
+        error("[kernel] [" + creep.name + "] has unknown task " + taskId);
+        return;
+    }
+
+    //FIXME check task state for break
+
+    const task : Task = holder.task;
+    debug("[kernel] [" + creep.name + "] should " + task.type);
+
+    const step : TaskStep = Tasks.getNextStep(task, creep);
+    debug("[kernel] [" + creep.name + "] is about to " + step.type);
+
+    const result : TaskStepResult = Creeps.processTaskStep(creep, step);
+
+    // more state handling if finished, blocked, error
 }

@@ -9,7 +9,9 @@ import type { ErrorEntry } from "../types/FooTypes.js";
 import Game from "./ApiGame";
 import Memory from "./ApiMemory";
 
-export let DEBUG_ENABLED: boolean = false;
+import * as Config from "./config";
+
+export let DEBUG_ENABLED: boolean = Config.DEBUG_ENABLED || false;
 
 export function init(): void {
 }

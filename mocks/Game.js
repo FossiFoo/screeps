@@ -103,6 +103,7 @@ class TestGame {
     structures: StructureMap;
     constructionSites: ConstructionSiteMap;
     time: number;
+    getObjectByIdReturnValue: any;
     constructor() {
         this.cpu = cpu;
         this.creeps = creeps;
@@ -116,12 +117,13 @@ class TestGame {
         this.constructionSites = {};
         this.time = 0;
     }
-    getObjectById(id) {return;}
+    getObjectById(id) {return this.getObjectByIdReturnValue;}
     notify(message, groupInterval) {return;}
     //---
     tick() {
         this.time++;
     }
+    setGetObjectByIdReturnValue(obj) {this.getObjectByIdReturnValue = obj;}
 }
 
 export type GameMock = {

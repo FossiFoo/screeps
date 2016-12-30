@@ -1,6 +1,7 @@
 /* @flow */
 
 import type { Task, TaskMeta, TaskHolder,
+              TaskStepNavigate,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
               KernelMemory,
               ProvisionTask, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
@@ -59,11 +60,23 @@ export const invalidTypeUnknown = {
     prio: TaskPriorities.MAX
 }
 
+export const validStep : TaskStepNavigate = {
+    type: "NAVIGATE",
+    destination: {
+        room: "N0W0",
+        position: {
+            x: 1,
+            y: 1
+        }
+    }
+}
+
 export const Tasks = {
     valid: validTask,
     invalidTypeUnknown: ((invalidTypeUnknown: any): Task),
     validMeta: validMeta,
     validHolder: validHolder,
+    validStep: validStep
 }
 
 const validGCLStats: GCLStats = {

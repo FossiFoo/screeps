@@ -159,3 +159,21 @@ it('should return if body can be constructed (yet)', function() {
 
     expect(name).not.toBeDefined();
 });
+
+it('should warn if creep is idle', function() {
+    ((Creeps.getState: any): JestMockFn).mockReturnValue(CreepStates.IDLE);
+    const creep : Creep = Game.creeps["Flix"];
+
+    dut.processTasks(Kernel, creep, Game);
+
+    expect(Monitoring.warn).toBeCalled();
+});
+
+it('should noop if creep is spawning', function() {
+    const creep : Creep = Game.creeps["Flix"];
+    creep.spawning = true;
+
+    dut.processTasks(Kernel, creep, Game);
+
+    expect(Kernel.processTask).not.toBeCalled();
+});
