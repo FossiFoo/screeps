@@ -80,6 +80,9 @@ class TestCreep extends Creep {
         this.name = name;
         this.room = room;
         this.memory = {};
+        this.carry = {
+            RESOURCE_ENERGY: 0
+        }
     }
 }
 

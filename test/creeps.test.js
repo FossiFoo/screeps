@@ -117,10 +117,89 @@ it('should move the creep on a navigation step', function() {
 it('should error if creep cant move on a navigation step', function() {
     const creep : Creep = Game.creeps["Leo"];
     creep.moveTo.mockReturnValueOnce(ERR_TIRED);
-    dut.memory(creep).task.assignedId = "test-1234";
 
     const result = dut.navigate(creep, Tasks.validStep);
 
     expect(Monitoring.warn).toBeCalled();
     expect(result.error).toBe("" + ERR_TIRED);
+});
+
+it('should harvest on a harvest step', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.harvest.mockReturnValueOnce(OK);
+
+    const result = dut.harvest(creep, {type: "HARVEST", sourceId: "Source"});
+
+    expect(creep.harvest).toBeCalled();
+    expect(result.success).toBeTruthy();
+});
+
+it('should error if source not found on harvest', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue(null);
+
+    const creep : Creep = Game.creeps["Leo"];
+
+    const result = dut.harvest(creep, {type: "HARVEST", sourceId: "Source"});
+
+    expect(creep.harvest).not.toBeCalled();
+    expect(Monitoring.error).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should error if harvest fails', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.harvest.mockReturnValueOnce(ERR_NOT_IN_RANGE);
+
+    const result = dut.harvest(creep, {type: "HARVEST", sourceId: "Source"});
+
+    expect(creep.harvest).toBeCalled();
+    expect(Monitoring.warn).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should transfer on a transfer step', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.transfer.mockReturnValueOnce(OK);
+
+    const result = dut.transfer(creep, {type: "TRANSFER", sourceId: "Source"});
+
+    expect(creep.transfer).toBeCalled();
+    expect(result.success).toBeTruthy();
+});
+
+it('should error if source not found on transfer', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue(null);
+
+    const creep : Creep = Game.creeps["Leo"];
+
+    const result = dut.transfer(creep, {type: "TRANSFER", sourceId: "Source"});
+
+    expect(creep.transfer).not.toBeCalled();
+    expect(Monitoring.error).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should error if transfer fails', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.transfer.mockReturnValueOnce(ERR_NOT_IN_RANGE);
+
+    const result = dut.transfer(creep, {type: "TRANSFER", sourceId: "Source"});
+
+    expect(creep.transfer).toBeCalled();
+    expect(Monitoring.warn).toBeCalled();
+    expect(result.error).toBeTruthy();
 });

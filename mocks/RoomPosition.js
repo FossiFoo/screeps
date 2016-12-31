@@ -1,6 +1,10 @@
 /* @flow */
 export default class RoomPosition  {
-    constructor(x: number, y: number, roomName: string) {};
+    constructor(x: number, y: number, roomName: string) {
+        this.x = x;
+        this.y = y;
+        this.roomName = roomName;
+    };
     roomName: string;
     x: number;
     y: number;

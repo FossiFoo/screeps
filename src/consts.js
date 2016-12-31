@@ -31,7 +31,9 @@ export const TaskTypes = {
 
 export const TaskStepTypes = {
     NOOP: "NOOP",
-    NAVIGATE: "NAVIGATE"
+    NAVIGATE: "NAVIGATE",
+    HARVEST: "HARVEST",
+    TRANSFER: "TRANSFER"
 }
 
 export const SourceTargets = {

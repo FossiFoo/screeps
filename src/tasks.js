@@ -2,7 +2,8 @@
 
 import type { Tick, TaskPrio, Task,
               SourceTarget, EnergyTarget, ProvisionTask, SourceId,
-              TaskStep, TaskStepNavigate, Position } from "../types/FooTypes.js";
+              TaskStep, TaskStepNavigate, TaskStepHarvest, TaskStepTransfer,
+              Position } from "../types/FooTypes.js";
 import  { TaskTypes, TaskStepTypes, SourceTargets } from "./consts";
 
 import { debug, info, warn, error } from "./monitoring";
@@ -48,31 +49,84 @@ export function findClosestNavigationTargetByType(targetType: ScreepsConstantFin
     }
 }
 
-export function provisioningStep(task: ProvisionTask, creep: Creep): TaskStep {
-    //FIXME check current position
-    //FIXME check creep carry state
-    const source : SourceTarget = task.source;
-    const sourceRoom : RoomName = source.room;
-    let position : Position;
-    if (source.type === SourceTargets.ANY) {
-        if (creep.room.name === sourceRoom) {
-            position = findClosestNavigationTargetByType(FIND_SOURCES_ACTIVE, creep.pos);
-        } else {
-            //not in correct room yet
-            position = {x:0, y:0};
-        }
-    } else {
-        const sourceId : SourceId = source.id;
-        position = findNavigationTargetById(sourceId);
-    }
+
+export function constructMoveStep(position: Position, roomName: RoomName): TaskStep {
     const navigation : TaskStepNavigate = {
         type: "NAVIGATE",
         destination: {
-            room: source.room,
+            room: roomName,
             position
         }
     }
     return navigation;
+}
+
+export function constructHarvestSourceStep(sourceId: SourceId): TaskStep {
+    const harvest : TaskStepHarvest = {
+        type: "HARVEST",
+        sourceId
+    }
+    return harvest;
+}
+
+export function constructStepTransfer(targetId: ObjectId): TaskStep {
+    const transfer : TaskStepTransfer = {
+        type: "TRANSFER",
+        targetId
+    }
+    return transfer;
+}
+
+export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): Position {
+    if (source.type === SourceTargets.FIXED) {
+        const sourceId : SourceId = source.id;
+        return findNavigationTargetById(sourceId);
+    }
+
+    if (currentPosition.roomName === source.room) {
+        //not in correct room yet
+        return findClosestNavigationTargetByType(FIND_SOURCES_ACTIVE, currentPosition);
+    } else {
+        return {x:0, y:0};
+    }
+}
+
+export function getSourceIdForTarget(source: SourceTarget, currentPosition: RoomPosition): SourceId {
+    if (source.type === SourceTargets.FIXED) {
+        return source.id;
+    }
+    const sourceObject: Source = currentPosition.findClosestByRange(FIND_SOURCES_ACTIVE);
+    return sourceObject.id;
+}
+
+export function provisioningStep(task: ProvisionTask, creep: Creep): TaskStep {
+
+    const carryAmount : number = creep.carry.energy || 0; //FIXME mixed loads
+    const carryCapacity : number = creep.carryCapacity;
+    const currentPosition : RoomPosition = creep.pos;
+
+    //FIXME check if close to source
+    if (carryAmount > carryCapacity * 0.9) {
+        const taskTarget : EnergyTarget = task.target;
+        const targetPosition : Position = findNavigationTargetById(taskTarget.targetId);
+
+        const adjacent : boolean = currentPosition.isNearTo(targetPosition.x, targetPosition.y);
+        if (adjacent) {
+            return constructStepTransfer(taskTarget.targetId);
+        }
+
+        return constructMoveStep(targetPosition, taskTarget.room);
+    }
+
+    const source : SourceTarget = task.source;
+    const sourcePosition : Position = findNearestSourceTarget(currentPosition, source);
+
+    const adjacent : boolean = currentPosition.isNearTo(sourcePosition.x, sourcePosition.y);
+    if (adjacent) {
+        const sourceId : SourceId = getSourceIdForTarget(source, currentPosition);
+        return constructHarvestSourceStep(sourceId);
+    }
+    return constructMoveStep(sourcePosition, source.room);
 }
 
 export function getNextStep(task: Task, creep: Creep): TaskStep {

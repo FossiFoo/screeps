@@ -3,6 +3,8 @@
 import type { Task, TaskId, TaskState, TaskPrio,
               TaskStep, TaskStepType, TaskStepResult,
               TaskStepNavigate, Position,
+              TaskStepHarvest, SourceId,
+              TaskStepTransfer,
               CreepMemory, CreepState } from "../types/FooTypes.js";
 
 import { CREEP_MEMORY_VERSION } from "./consts";
@@ -12,7 +14,7 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 import { TaskStates, CreepStates } from "./consts";
-import { debug, warn } from "./monitoring";
+import { debug, warn, error } from "./monitoring";
 
 export function memory(creep: Creep): CreepMemory {
     if (creep.memory.version === CREEP_MEMORY_VERSION) {
@@ -66,8 +68,44 @@ export function navigate(creep: Creep, stepParam: any): TaskStepResult {
     return {success: true};
 }
 
+export function harvest(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepHarvest = stepParam;
+
+    const sourceId : SourceId = step.sourceId;
+    const source : ?Source = Game.getObjectById(sourceId);
+    if (!source) {
+        error("[creep] [" + creep.name + "] can't find source " + sourceId);
+        return {error: "unknown object: " + sourceId};
+    }
+    const result : CreepHarvestReturn = creep.harvest(source);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't harvest " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
+export function transfer(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepTransfer = stepParam;
+
+    const targetId : ObjectId = step.targetId;
+    const target : ?Structure = Game.getObjectById(targetId);
+    if (!target) {
+        error("[creep] [" + creep.name + "] can't find target " + targetId);
+        return {error: "unknown object: " + targetId};
+    }
+    const result : CreepTransferReturn = creep.transfer(target, RESOURCE_ENERGY);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't transfer " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
 const stepFunctions = {
     "NAVIGATE": navigate,
+    "HARVEST": harvest,
+    "TRANSFER": transfer,
     "NOOP": noop
 }
 

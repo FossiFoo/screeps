@@ -1,2 +1,2 @@
 /* @flow */
-export const DEBUG_ENABLED : boolean = false;
+export const DEBUG_ENABLED : boolean = true;

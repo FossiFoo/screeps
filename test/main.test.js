@@ -23,7 +23,7 @@ import * as Rooms from "../src/rooms.js";
 it('should check cpu overrun', function() {
     Memory.finished = false;
     Game.time = 123;
-    dut.loop();
+    dut.loopInternal(Game, Memory);
 
     expect(Monitoring.error).toBeCalled();
 });
@@ -66,7 +66,7 @@ it('should init modules', function() {
 });
 
 it('should record stats', function() {
-    dut.loop();
+    dut.loopInternal(Game, Memory);
 
     expect(Stats.recordStats).toBeCalled();
 });

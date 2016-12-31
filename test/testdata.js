@@ -9,6 +9,7 @@ import type { Task, TaskMeta, TaskHolder,
 import { TaskPriorities, TaskTypes, TaskStates, SourceTargets } from "../src/consts.js";
 
 const validRoomName : RoomName = "N0W0";
+const otherRoomName : RoomName = "N1W1";
 
 const validTarget : EnergyTarget = {
     room: validRoomName
@@ -23,8 +24,14 @@ const validSource : SourceTarget = {
     room: validRoomName
 }
 
+const otherRoomSource : SourceTarget = {
+    type: SourceTargets.ANY,
+    room: otherRoomName
+}
+
 export const Sources = {
-    valid: validSource
+    valid: validSource,
+    otherRoom: otherRoomSource
 }
 
 const validTask : ProvisionTask = {

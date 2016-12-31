@@ -8,8 +8,9 @@ declare var _ : Lodash;
 import type { CreepBody, FooMemory, Task, TaskId, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
 
 // API
-import Game from "./ApiGame";
-import Memory from "./ApiMemory";
+/* import Game from "./ApiGame";
+ * import Memory from "./ApiMemory";*/
+const Memory: FooMemory = (Memory: any)
 
 // Support
 import * as Stats from "./stats";
@@ -56,7 +57,7 @@ export function init(Game: GameI, Memory: FooMemory): void {
     Kernel.init(Game, Memory);
 }
 
-export function finish(): void {
+export function finish(Memory: FooMemory): void {
     Memory.finished = true;
     debug("tock");
 }
@@ -179,7 +180,7 @@ export function processTasks(Kernel: KernelType, creep: Creep, Game: GameI) {
     // - claim
 }
 
-export function loop(): void {
+export function loopInternal(Game: GameI, Memory: FooMemory): void {
 
     checkCPUOverrun(Memory);
 
@@ -239,5 +240,9 @@ export function loop(): void {
 
     Stats.recordStats(Game, Memory);
 
-    finish();
+    finish(Memory);
+}
+
+export function loop(): void {
+    loopInternal(Game, Memory);
 }

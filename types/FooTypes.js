@@ -178,6 +178,16 @@ export type TaskStepNavigate = {
     }
 } & TaskStep;
 
+export type TaskStepHarvest = {
+    type: "HARVEST",
+    sourceId: SourceId
+} & TaskStep;
+
+export type TaskStepTransfer = {
+    type: "TRANSFER",
+    targetId: ObjectId
+} & TaskStep;
+
 export type TaskStepNoop = {
     type: "NOOP"
 } & TaskStep;
