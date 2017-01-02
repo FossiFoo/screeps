@@ -12,7 +12,7 @@ import Game from "../src/ApiGame.js";
 jest.unmock("../src/ApiMemory.js");
 import Memory from "../src/ApiMemory.js";
 jest.unmock("../src/consts.js")
-import { TaskStates } from "../src/consts.js";
+import { TaskStates, TaskPriorities } from "../src/consts.js";
 
 // DUT
 jest.unmock("../src/kernel.js");
@@ -84,6 +84,10 @@ it('should get local waiting task', function() {
     const validId : TaskId = "test-task-valid-1234";
     const validTask : Task = Testdata.Tasks.valid;
     Memory.kernel.scheduler.tasks[validId] = {id: validId, task: validTask, meta: Testdata.Tasks.validMeta};
+    const otherValidId : TaskId = "test-task-valid-1235";
+    const otherTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    otherTask.prio = TaskPriorities.IDLE;
+    Memory.kernel.scheduler.tasks[otherValidId] = {id: otherValidId, task: otherTask, meta: Testdata.Tasks.validMeta};
 
     // local running
     const runningId : TaskId = "test-task-running-1236";
@@ -139,7 +143,7 @@ it('should get count of local waiting tasks', function() {
     dut.init(Game, Memory);
 
     const room : RoomName = "N0W0";
-    const taskCount : number = dut.getLocalWaitingCount(room);
+    const taskCount : number = dut.getLocalCountForState(room, TaskStates.WAITING);
 
     expect(taskCount).toBe(2);
 });
@@ -157,7 +161,7 @@ it('should assign task to creep', function() {
 
     const mem = Memory.kernel.scheduler.tasks[id];
     expect(mem.meta.assigned).toBeDefined();
-    expect(mem.meta.state).toEqual(TaskStates.RUNNING);
+    expect(mem.meta.state).toEqual(TaskStates.ASSIGNED);
 
     expect(Creeps.assign).toBeCalled();
 });
@@ -242,6 +246,7 @@ it('should get next step for task', function() {
 
     ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
     ((Tasks.getNextStep: any): JestMockFn).mockReturnValue(Testdata.Tasks.validStep);
+    ((Creeps.processTaskStep: any): JestMockFn).mockReturnValue({success: true});
 
     Memory.kernel.scheduler.tasks[validHolder.id] = validHolder;
 

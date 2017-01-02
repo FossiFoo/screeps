@@ -18,7 +18,7 @@ import * as dut from "../src/stats.js";
 import RoomMock from "../mocks/RoomMock.js";
 import StructureController from "../mocks/StructureController.js";
 import Spawn from "../mocks/Spawn.js";
-import { debug } from "../src/monitoring.js";
+import * as Monitoring from "../src/monitoring.js";
 
 // test data
 
@@ -106,6 +106,6 @@ it('should record stats', function() {
     Game.time = 1000000;
     dut.recordStats(Game, Memory);
 
-    expect(debug).toBeCalled();
+    expect(Monitoring.info).toBeCalled();
     expect(_.size(Memory.stats.room)).toBe(2);
 });

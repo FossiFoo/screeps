@@ -5,6 +5,7 @@ import type { Task, TaskId, TaskState, TaskPrio,
               TaskStepNavigate, Position,
               TaskStepHarvest, SourceId,
               TaskStepTransfer,
+              TaskStepUpgrade,
               CreepMemory, CreepState } from "../types/FooTypes.js";
 
 import { CREEP_MEMORY_VERSION } from "./consts";
@@ -36,6 +37,11 @@ export function assign(creep: Creep, taskId: TaskId, task: Task): void {
     mem.task.assignedId = taskId;
 }
 
+export function lift(creep: Creep, taskId: TaskId): void {
+    var mem : CreepMemory = memory(creep);
+    mem.task.assignedId = null;
+}
+
 export function getAssignedTask(creep: Creep): ?TaskId {
     var mem : CreepMemory = memory(creep);
     return mem.task.assignedId;
@@ -47,7 +53,7 @@ export function getState(creep: Creep): CreepState {
 
 export function noop(creep: Creep): TaskStepResult {
     creep.say("lalala");
-    return {};
+    return {success: true};
 }
 
 export function navigate(creep: Creep, stepParam: any): TaskStepResult {
@@ -102,10 +108,28 @@ export function transfer(creep: Creep, stepParam: any): TaskStepResult {
     return {success: true};
 }
 
+export function upgrade(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepUpgrade = stepParam;
+
+    const targetId : ObjectId = step.targetId;
+    const target : ?StructureController = Game.getObjectById(targetId);
+    if (!target) {
+        error("[creep] [" + creep.name + "] can't find target " + targetId);
+        return {error: "unknown object: " + targetId};
+    }
+    const result : CreepUpgradeReturn = creep.upgradeController(target);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't upgrade " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
 const stepFunctions = {
     "NAVIGATE": navigate,
     "HARVEST": harvest,
     "TRANSFER": transfer,
+    "UPGRADE": upgrade,
     "NOOP": noop
 }
 

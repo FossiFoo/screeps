@@ -73,7 +73,7 @@ it('should record stats', function() {
 
 
 it('should create provision task in bootup', function() {
-    ((Kernel.getLocalWaitingCount: any): JestMockFn).mockReturnValue(1);
+    ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(1);
     ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([Game.spawns["Spawn1"]]);
 
     const room : Room = Game.rooms["N0W0"];
@@ -84,7 +84,7 @@ it('should create provision task in bootup', function() {
 });
 
 it('should not create task if too many already in bootup', function() {
-    ((Kernel.getLocalWaitingCount: any): JestMockFn).mockReturnValue(3);
+    ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(3);
     const room : Room = Game.rooms["N0W0"];
 
     dut.bootup(Kernel, room, Game);
@@ -176,4 +176,25 @@ it('should noop if creep is spawning', function() {
     dut.processTasks(Kernel, creep, Game);
 
     expect(Kernel.processTask).not.toBeCalled();
+});
+
+
+it('should upgrade the controller', function() {
+    ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(1);
+    const room : Room = Game.rooms["N0W0"];
+    dut.upgradeController(Kernel, room);
+
+    expect(Kernel.getLocalCountForState).toBeCalled();
+    expect(Tasks.constructUpgrade).toBeCalled();
+    expect(Kernel.addTask).toBeCalled();
+});
+
+it('should not upgrade the controller if too many tasks', function() {
+    ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(3);
+    const room : Room = Game.rooms["N0W0"];
+    dut.upgradeController(Kernel, room);
+
+    expect(Kernel.getLocalCountForState).toBeCalled();
+    expect(Tasks.constructUpgrade).not.toBeCalled();
+    expect(Kernel.addTask).not.toBeCalled();
 });

@@ -21,9 +21,11 @@ import Spawn from "../mocks/Spawn.js";
 
 function testLogs(fn) {
     const _console  = console;
+    // $FlowFixMe
     console.log = jest.fn();
 
     fn();
+
     expect(console.log).toBeCalled();
 
     console = _console;
@@ -53,10 +55,13 @@ it('should not log debugs', function() {
 
 it('should record debugs if enabled', function() {
     const _console  = console;
+
+    // $FlowFixMe
     console.log = jest.fn();
 
     dut.setDebugEnabled(false);
     dut.debug();
+
     expect(console.log).not.toBeCalled();
 
     console = _console;

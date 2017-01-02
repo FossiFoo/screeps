@@ -5,12 +5,14 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 // types
-import type { CreepBody, FooMemory, Task, TaskId, SourceTarget, EnergyTarget } from "../types/FooTypes.js";
+import type { CreepBody, FooMemory, Task, TaskId,
+              SourceTarget, EnergyTargetSpawn, EnergyTargetController } from "../types/FooTypes.js";
 
 // API
-/* import Game from "./ApiGame";
- * import Memory from "./ApiMemory";*/
-const Memory: FooMemory = (Memory: any)
+/* import Game from "./ApiGame";*/
+import * as ApiMemory from "./ApiMemory";
+// $FlowFixMe
+const Memory: FooMemory = (ApiMemory.initializeMemory(Memory));
 
 // Support
 import * as Stats from "./stats";
@@ -19,7 +21,7 @@ import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes } from "./consts";
+import { TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes, TaskStates } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
@@ -67,9 +69,9 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     // min workers for a starting room
     const BOOTUP_THRESHOLD : number = 3;
     if (_.size(creeps) <= BOOTUP_THRESHOLD) {
-        debug("[main] [" + room.name + "] bootup mode active");
+        warn("[main] [" + room.name + "] bootup mode active");
 
-        const openTaskCount : number = Kernel.getLocalWaitingCount(room.name); // FIXME check better
+        const openTaskCount : number = Kernel.getLocalCountForState(room.name, TaskStates.WAITING); // FIXME check better
         if (openTaskCount > 1) {
             debug("[main] [" + room.name + "] [bootup] has too many pending jobs");
             return;
@@ -89,7 +91,7 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
             type: SourceTargets.ANY,
             room: room.name
         }
-        const target : EnergyTarget = {
+        const target : EnergyTargetSpawn = {
             room: room.name,
             type: EnergyTargetTypes.SPAWN,
             name: spawn.name,
@@ -102,9 +104,9 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
 }
 
 
-export function generateLocalTasks(Kernel: KernelType, room: Room, Game: GameI): void {
+export function generateLocalPriorityTasks(Kernel: KernelType, room: Room, Game: GameI): void {
 
-    debug(`generating local tasks for ${room.name}`)
+    debug(`generating priority tasks for ${room.name}`)
 
     // === SURVIVAL ===
     // -> no spawn -> rebuild or abandon
@@ -129,7 +131,7 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
         return;
     }
 
-    debug(`assigning local tasks to ${creep.name}`);
+    debug(`[main] [${creep.name}] assigning local tasks`);
 
     const room : Room = creep.room; // FIXME make this assigned room?
     const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
@@ -137,6 +139,8 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
         //FIXME look for task somewhere else or recycle
         return;
     }
+
+    info(`[main] [${creep.name}] takes up task ${task}`);
     Kernel.assign(task, creep);
 }
 
@@ -153,7 +157,7 @@ export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game:
 
     const creepBody : ?CreepBody = Kernel.designAffordableCreep(task, room);
     if (!creepBody) {
-        debug("[main] no suitable body could be constructed for " + task + " in " + room.name);
+        debug(`[main] [${room.name}] no suitable body could be constructed for ${task}`);
         return;
     }
     return createCreep(spawn, creepBody);
@@ -180,6 +184,45 @@ export function processTasks(Kernel: KernelType, creep: Creep, Game: GameI) {
     // - claim
 }
 
+export function upgradeController(Kernel: KernelType, room: Room): void {
+    const openTaskCount : number = Kernel.getLocalCountForState(room.name, TaskStates.WAITING); // FIXME check better
+    if (openTaskCount > 1) {
+        debug(`[main] [${room.name}] is busy, not adding upgrade`);
+        return;
+    }
+
+    const source : SourceTarget = {
+        type: SourceTargets.ANY,
+        room: room.name
+    }
+    const controller : EnergyTargetController = {
+        type: EnergyTargetTypes.CONTROLLER,
+        room: room.name,
+        targetId: room.controller.id
+    }
+    const upgradeController: Task = Tasks.constructUpgrade(Game.time, TaskPriorities.UPGRADE, source, controller);
+
+    Kernel.addTask(upgradeController);
+}
+
+export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Game: GameI): void {
+
+    debug(`[main] [${room.name}] generating improvement tasks`)
+
+    // - build extension
+    // - build container
+    // - build turret
+    // - build storage
+    // - build some road
+    // - build some wall
+    // - upgrade controller
+    upgradeController(Kernel, room);
+    // - mine long distance
+    // - claim room
+    // - assist room
+    // - ???
+}
+
 export function loopInternal(Game: GameI, Memory: FooMemory): void {
 
     checkCPUOverrun(Memory);
@@ -192,7 +235,7 @@ export function loopInternal(Game: GameI, Memory: FooMemory): void {
 
     for (let roomKey: string in rooms) {
         const room: Room = rooms[roomKey];
-        generateLocalTasks(Kernel, room, Game);
+        generateLocalPriorityTasks(Kernel, room, Game);
     }
 
     // === GLOBAL ===
@@ -221,17 +264,10 @@ export function loopInternal(Game: GameI, Memory: FooMemory): void {
 
 
     // === UPGRADE ===
-    // - build extension
-    // - build container
-    // - build turret
-    // - build storage
-    // - build some road
-    // - build some wall
-    // - upgrade controller
-    // - mine long distance
-    // - claim room
-    // - assist room
-    // - ???
+    for (let roomKey: string in rooms) {
+        const room: Room = rooms[roomKey];
+        generateLocalImprovementTasks(Kernel, room, Game);
+    }
 
     // === DEFERREDS & MAINTENANCE ===
     // collectGarbage();

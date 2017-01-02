@@ -75,7 +75,7 @@ function schedulePush() {
 	pushTimeout = setTimeout(function() {
 		pushTimeout = undefined;
 		writeListener && writeListener();
-	}, 50);
+	}, 500);
 }
 
 if (argv.local) {

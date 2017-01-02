@@ -98,7 +98,7 @@ it('should get the creeps state if task is assigned', function() {
 it('should call task processing according to type', function() {
     const creep : Creep = Game.creeps["Leo"];
 
-    const result = dut.processTaskStep(creep, {type: "NOOP"});
+    const result = dut.processTaskStep(creep, {type: "NOOP", init: true, final: true});
 
     expect(creep.say).toBeCalled();
 });
@@ -200,6 +200,46 @@ it('should error if transfer fails', function() {
     const result = dut.transfer(creep, {type: "TRANSFER", sourceId: "Source"});
 
     expect(creep.transfer).toBeCalled();
+    expect(Monitoring.warn).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should upgrade on a upgrade step', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.upgradeController.mockReturnValueOnce(OK);
+
+    const result = dut.upgrade(creep, {type: "UPGRADE", sourceId: "Source"});
+
+    expect(creep.upgradeController).toBeCalled();
+    expect(result.success).toBeTruthy();
+});
+
+it('should error if source not found on upgrade', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue(null);
+
+    const creep : Creep = Game.creeps["Leo"];
+
+    const result = dut.upgrade(creep, {type: "UPGRADE", sourceId: "Source"});
+
+    expect(creep.upgradeController).not.toBeCalled();
+    expect(Monitoring.error).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should error if upgrade fails', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.upgradeController.mockReturnValueOnce(ERR_NOT_IN_RANGE);
+
+    const result = dut.upgrade(creep, {type: "UPGRADE", sourceId: "Source"});
+
+    expect(creep.upgradeController).toBeCalled();
     expect(Monitoring.warn).toBeCalled();
     expect(result.error).toBeTruthy();
 });

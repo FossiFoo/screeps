@@ -14,7 +14,7 @@
     "eslint": "^3.12.2",
     "eslint-config-screeps-neat-o": "^1.0.0",
     "eslint-plugin-flowtype": "^2.29.1",
-    "flow-bin": "^0.37.0",
+    "flow-bin": "^0.37.1",
     "flow-cli": "0.0.0-pre",
     "flow-typed": "^2.0.0",
     "install": "^0.8.2",

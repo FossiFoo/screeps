@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
 ./node_modules/babel-cli/bin/babel.js --watch --out-dir dist src &
-sleep 1
+sleep 3
 ./sync.js --local

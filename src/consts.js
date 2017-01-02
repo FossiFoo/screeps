@@ -1,6 +1,9 @@
 /* @flow */
 
-import type { SourceAny, SourceFixed, TaskTypeProvision, CreepMemoryVersion } from "../types/ConstTypes.js"
+import type { SourceAny, SourceFixed,
+              TaskTypeProvision, TaskTypeUpgrade,
+              EnergyTargetTypeSpawn, EnergyTargetTypeController,
+              CreepMemoryVersion } from "../types/ConstTypes.js"
 
 export const CREEP_MEMORY_VERSION : CreepMemoryVersion = "0.0.1";
 
@@ -19,6 +22,7 @@ export const TaskPriorities = {
 
 export const TaskStates = {
     WAITING: "WAITING",
+    ASSIGNED: "ASSIGNED",
     RUNNING: "RUNNING",
     BLOCKED: "BLOCKED",
     FINISHED: "FINISHED",
@@ -26,14 +30,16 @@ export const TaskStates = {
 }
 
 export const TaskTypes = {
-    PROVISION: ("PROVISION": TaskTypeProvision)
+    PROVISION: ("PROVISION": TaskTypeProvision),
+    UPGRADE: ("UPGRADE": TaskTypeUpgrade)
 }
 
 export const TaskStepTypes = {
     NOOP: "NOOP",
     NAVIGATE: "NAVIGATE",
     HARVEST: "HARVEST",
-    TRANSFER: "TRANSFER"
+    TRANSFER: "TRANSFER",
+    UPGRADE: "UPGRADE"
 }
 
 export const SourceTargets = {
@@ -50,6 +56,6 @@ export const CreepStates = {
 }
 
 export const EnergyTargetTypes = {
-    SPAWN: "SPAWN",
-    OTHER: "OTHER"
+    SPAWN: ("SPAWN": EnergyTargetTypeSpawn),
+    CONTROLLER: ("CONTROLLER": EnergyTargetTypeController)
 }

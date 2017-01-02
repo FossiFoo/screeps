@@ -1,7 +1,7 @@
 /* @flow */
 
 import { TaskStates, TaskTypes, TaskStepTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
-import type { SourceFixed, SourceAny, TaskTypeProvision, EnergyTargetTypeSpawn, CreepMemoryVersion } from "../types/ConstTypes.js";
+import type { SourceFixed, SourceAny, TaskTypeProvision, TaskTypeUpgrade, EnergyTargetTypeSpawn, EnergyTargetTypeController, CreepMemoryVersion } from "../types/ConstTypes.js";
 
 export type Predicate<T> = (t: T) => boolean;
 
@@ -55,11 +55,21 @@ export type MonitoringMemory = {
     errors: ErrorEntry[]
 };
 
-export type TaskMap = {[name: TaskId]: TaskHolder};
+export type TaskMemory = Object;
+
+export type TaskMemoryHolder = {
+    memory: TaskMemory;
+};
+
+export type TaskHolderMap = {[name: TaskId]: TaskHolder};
+export type TaskMemoryMap = {[name: TaskId]: TaskMemoryHolder};
 
 export type KernelMemory = {
     scheduler: {
-        tasks: TaskMap
+        tasks: TaskHolderMap
+    },
+    virtual: {
+        tasks: TaskMemoryMap
     }
 }
 
@@ -104,30 +114,40 @@ export type EnergyTargetTypesType = $Keys<typeof EnergyTargetTypes>;
 export type EnergyTargetSpawn = {
     type: EnergyTargetTypeSpawn;
     name: SpawnName;
-    targetId: SpawnId;
+} & EnergyTargetBase;
+
+export type EnergyTargetController = {
+    type: EnergyTargetTypeController;
 } & EnergyTargetBase;
 
 export type EnergyTargetBase = {
     room: RoomName;
+    targetId: ObjectId;
 };
 
-export type EnergyTarget = any;
+export type EnergyTarget =  EnergyTargetSpawn | EnergyTargetController;
 
 export type ProvisionTask = {
-    type: TaskTypeProvision,
-    source: SourceTarget,
-    target: EnergyTarget
+    type: TaskTypeProvision;
+} & TaskEnergyTransmission;
+
+export type UpgradeTask = {
+    type: TaskTypeUpgrade;
+} & TaskEnergyTransmission;
+
+export type TaskEnergyTransmission = {
+    source: SourceTarget;
+    target: EnergyTarget;
 } & TaskBase;
 
 export type TaskBase = {
-    type: TaskType,
-    assignedRoom: RoomName,
-    created: Tick,
-    updated: Tick,
-    prio: TaskPrio
+    assignedRoom: RoomName;
+    created: Tick;
+    updated: Tick;
+    prio: TaskPrio;
 };
 
-export type Task = ProvisionTask;
+export type Task = ProvisionTask | UpgradeTask;
 
 export type TaskId = string;
 
@@ -166,10 +186,6 @@ export type TaskStepResult = {
 
 export type TaskStepType = $Keys<typeof TaskStepTypes>;
 
-export type TaskStep = {
-    type: TaskStepType
-};
-
 export type TaskStepNavigate = {
     type: "NAVIGATE",
     destination: {
@@ -188,6 +204,17 @@ export type TaskStepTransfer = {
     targetId: ObjectId
 } & TaskStep;
 
+export type TaskStepUpgrade = {
+    type: "UPGRADE",
+    targetId: ObjectId
+} & TaskStep;
+
 export type TaskStepNoop = {
     type: "NOOP"
 } & TaskStep;
+
+export type TaskStep = {
+    type: TaskStepType,
+    init: boolean,
+    final: boolean
+};

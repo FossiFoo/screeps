@@ -5,7 +5,7 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 import type { FooMemory, RoomStats, SpawnStats, GCLStats, CPUStats, StatsMemory, SpawnMemory } from "../types/FooTypes.js";
-import { debug } from "./monitoring";
+import { debug, info } from "./monitoring";
 
 const REPORT_FREQUENCY = 10;
 
@@ -97,33 +97,33 @@ export function generateStats(
 }
 
 export function reportStats(tick: number, stats: StatsMemory) {
-    debug("");
-    debug("");
-    debug("");
-    debug(`= FooStats ================================`);
-    debug(`Tick: ${tick}`);
-    debug("");
-    debug("");
-    debug(`- GCL -------------------------------------`);
-    debug(`Level: ${stats.gcl.level}`);
-    debug("");
-    debug("");
-    debug(`- ROOMS -----------------------------------`);
-    debug(`Room count: ${_.size(stats.room)}`);
-    debug("");
-    debug("");
-    debug(`- SPAWNS ----------------------------------`);
-    debug(`Spawn count: ${_.size(stats.spawn)}`);
-    debug("");
-    debug("");
-    debug(`- CPU -------------------------------------`);
-    debug(`cpu limit: ${stats.cpu.limit}`);
-    debug(`tick limit: ${stats.cpu.tickLimit}`);
-    debug(`bucket: ${stats.cpu.bucket}`);
-    debug(`used: ${stats.cpu.getUsed}`);
-    debug("");
-    debug("");
-    debug(`===========================================`);
+    info("");
+    info("");
+    info("");
+    info(`= FooStats ================================`);
+    info(`Tick: ${tick}`);
+    info("");
+    info("");
+    info(`- GCL -------------------------------------`);
+    info(`Level: ${stats.gcl.level}`);
+    info("");
+    info("");
+    info(`- ROOMS -----------------------------------`);
+    info(`Room count: ${_.size(stats.room)}`);
+    info("");
+    info("");
+    info(`- SPAWNS ----------------------------------`);
+    info(`Spawn count: ${_.size(stats.spawn)}`);
+    info("");
+    info("");
+    info(`- CPU -------------------------------------`);
+    info(`cpu limit: ${stats.cpu.limit}`);
+    info(`tick limit: ${stats.cpu.tickLimit}`);
+    info(`bucket: ${stats.cpu.bucket}`);
+    info(`used: ${stats.cpu.getUsed}`);
+    info("");
+    info("");
+    info(`===========================================`);
 }
 
 export function recordStats(Game: GameI, Memory: FooMemory): void {

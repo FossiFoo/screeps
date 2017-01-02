@@ -5,13 +5,17 @@ import MockRoom from "./RoomMock.js";
 import Market from "./Market.js";
 import GameMap from "./GameMap.js";
 import Creep from "./Creep.js";
+import Controller from "./Controller.js";
 
+class TestController extends Controller {
+}
 
 class TestRoom extends MockRoom {
     constructor(name: string) {
         super();
         this.name = name;
         this.energyAvailable = 300;
+        this.controller = new TestController();
     }
     find<T>(type: ScreepsConstantFind, opts?: { filter: any | string }): T[] {
         switch(type) {
@@ -129,8 +133,8 @@ class TestGame {
     setGetObjectByIdReturnValue(obj) {this.getObjectByIdReturnValue = obj;}
 }
 
-export type GameMock = {
-    tick: () => void
+export interface GameMock {
+    +tick: () => void
 }
 
 const Game : GameI & GameMock = new TestGame();

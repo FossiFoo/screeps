@@ -43,6 +43,9 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
         kernel: {
             scheduler: {
                 tasks: {}
+            },
+            virtual: {
+                tasks: {}
             }
         }
     };
@@ -51,5 +54,5 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
     return assigned;
 }
 
-export const Memory: FooMemory = initializeMemory(Memory);
-export default Memory;
+export const MemoryInternal: FooMemory = initializeMemory(Memory);
+export default MemoryInternal;

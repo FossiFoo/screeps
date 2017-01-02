@@ -8,7 +8,7 @@ import type { Predicate,
               Task, TaskId, TaskState, TaskMeta, TaskHolder, TaskPrio, TaskType,
               TaskStep, TaskStepResult,
               Position,
-              FooMemory, KernelMemory, TaskMap,
+              FooMemory, KernelMemory, TaskHolderMap, TaskMemoryHolder, TaskMemory,
               CreepBody } from "../types/FooTypes.js";
 
 type HolderPredicate = Predicate<TaskHolder>;
@@ -28,7 +28,7 @@ const BODYPART_COST = {
 
 import { TaskStates, TaskTypes } from "./consts";
 
-import { debug, info, error } from "./monitoring";
+import { debug, info, warn, error } from "./monitoring";
 
 
 import * as Creeps from "./creeps";
@@ -71,15 +71,20 @@ export function addTask(task: Task): ?TaskId {
 }
 
 export function makeFnFilterLocalByStatus(localRoom: RoomName, status: TaskState): HolderPredicate {
+    return makeFnFilterLocal(localRoom, (holder: TaskHolder) => {
+        return holder.meta.state === status
+    });
+}
+
+export function makeFnFilterLocal(localRoom: RoomName, filterFn: HolderPredicate): HolderPredicate {
     return (holder: TaskHolder) => {
-        return holder.task.assignedRoom === localRoom &&
-               holder.meta.state === status
+        return holder.task.assignedRoom === localRoom && filterFn(holder);
     };
 }
 
 function filterHolders(filterFn: HolderPredicate): TaskHolder[] {
     // body, ticksToLive, carry, carryCapacity
-    const tasks : TaskMap = Memory.scheduler.tasks;
+    const tasks : TaskHolderMap = Memory.scheduler.tasks;
     const localTasks : TaskHolder[] = _.filter(tasks, filterFn);
     return localTasks;
 }
@@ -87,13 +92,18 @@ function filterHolders(filterFn: HolderPredicate): TaskHolder[] {
 export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
     const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, TaskStates.WAITING));
     const sortedTasks : TaskHolder[] = _.sortBy(localTasks, (holder: TaskHolder): TaskPrio => holder.task.prio);
-    const first : ?TaskHolder = _.head(sortedTasks);
-    info("[Kernel] found " + (first ? first.id : "no") + " task for " + room);
+    const first : ?TaskHolder = _.last(sortedTasks); // highest prio
+    info("[Kernel] found " + (first ? first.id : "no") + " as next task for " + room);
     return first && first.id;
 }
 
-export function getLocalWaitingCount(room: RoomName /* , creep: Creep*/): number {
-    const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, TaskStates.WAITING));
+export function getLocalCount(room: RoomName, filterFn: HolderPredicate): number {
+    const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocal(room, filterFn));
+    return _.size(localTasks);
+}
+
+export function getLocalCountForState(room: RoomName, state: TaskState): number {
+    const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, state));
     return _.size(localTasks);
 }
 
@@ -119,7 +129,7 @@ export function assign(id: TaskId, creep: Creep): void {
 
     info(`[Kernel] assigned ${id} to ${creep.name}`);
     holder.meta.assigned = creep.name;
-    holder.meta.state = TaskStates.RUNNING;
+    holder.meta.state = TaskStates.ASSIGNED;
     Creeps.assign(creep, id, holder.task);
 }
 
@@ -147,12 +157,23 @@ export function designAffordableCreep(taskId: TaskId, room: Room): ?CreepBody {
 
     const taskType: TaskType = holder.task.type;
     switch (taskType) {
+        case TaskTypes.UPGRADE:
         case TaskTypes.PROVISION: {
             return designAffordableWorker(maxEnergy);
         }
     }
     error("[kernel] task type not known " + taskType);
     return null;
+}
+
+export function getMemoryByTask(id: TaskId): TaskMemory {
+    const holder : TaskMemoryHolder = Memory.virtual.tasks[id];
+    if (holder) {
+        return holder.memory;
+    }
+    const init : TaskMemory = {};
+    Memory.virtual.tasks[id] = {memory: init};
+    return init;
 }
 
 export function processTask(creep: Creep): void {
@@ -167,15 +188,35 @@ export function processTask(creep: Creep): void {
         return;
     }
 
+    const memory : TaskMemory = getMemoryByTask(taskId);
+
     //FIXME check task state for break
 
     const task : Task = holder.task;
     debug("[kernel] [" + creep.name + "] should " + task.type);
 
-    const step : TaskStep = Tasks.getNextStep(task, creep);
+    const preStepState : TaskState = holder.meta.state;
+    const step : TaskStep = Tasks.getNextStep(task, creep, preStepState, memory);
     debug("[kernel] [" + creep.name + "] is about to " + step.type);
 
-    const result : TaskStepResult = Creeps.processTaskStep(creep, step);
+    const result : TaskStepResult = Creeps.processTaskStep(creep, step, memory);
 
     // more state handling if finished, blocked, error
+    if (!result.success) {
+        if (preStepState === TaskStates.BLOCKED) {
+            //FIXME check time or such
+            warn(`[kernel] [${creep.name}] was blocked twice`);
+        }
+        holder.meta.state = TaskStates.BLOCKED;
+        return;
+    }
+
+    if (step.final) {
+        holder.meta.state = TaskStates.FINISHED;
+        info(`[kernel] [${creep.name}] finished task ${taskId}`);
+        Creeps.lift(creep, taskId);
+        return;
+    }
+
+    holder.meta.state = TaskStates.RUNNING;
 }

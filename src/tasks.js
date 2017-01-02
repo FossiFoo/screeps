@@ -1,10 +1,17 @@
 /* @flow */
 
-import type { Tick, TaskPrio, Task,
+// get flow to recognize the existing "_" as lodash
+import typeof * as Lodash from "lodash";
+declare var _ : Lodash;
+
+import type { Tick, TaskPrio, Task, TaskStepType, TaskState,
               SourceTarget, EnergyTarget, ProvisionTask, SourceId,
-              TaskStep, TaskStepNavigate, TaskStepHarvest, TaskStepTransfer,
+              UpgradeTask, EnergyTargetController,
+              TaskStep, TaskStepNavigate, TaskStepHarvest, TaskStepTransfer, TaskStepUpgrade,
+              TaskMemory,
               Position } from "../types/FooTypes.js";
-import  { TaskTypes, TaskStepTypes, SourceTargets } from "./consts";
+
+import  { TaskTypes, TaskStepTypes, SourceTargets, TaskStates } from "./consts";
 
 import { debug, info, warn, error } from "./monitoring";
 
@@ -17,13 +24,25 @@ export function init(game: GameI, memory: MemoryI) {
 export function constructProvisioning(now: Tick, prio: TaskPrio, source: SourceTarget, target: EnergyTarget): ProvisionTask {
     return {
         type: TaskTypes.PROVISION,
-        assignedRoom: source.room,
+        assignedRoom: target.room,
         source,
         target,
         created: now,
         updated: now,
         prio
     };
+}
+
+export function constructUpgrade(now: Tick, prio: TaskPrio, source: SourceTarget, target: EnergyTargetController): UpgradeTask {
+    return {
+        type: TaskTypes.UPGRADE,
+        assignedRoom: target.room,
+        source,
+        target,
+        created: now,
+        updated: now,
+        prio
+    }
 }
 
 export function findNavigationTargetById(id: ObjectId): Position {
@@ -49,32 +68,35 @@ export function findClosestNavigationTargetByType(targetType: ScreepsConstantFin
     }
 }
 
+export function constructStep(type: TaskStepType, stepData: Object, defaults: Object): TaskStep {
+    return _.assign({ type }, stepData, defaults);
+}
 
-export function constructMoveStep(position: Position, roomName: RoomName): TaskStep {
-    const navigation : TaskStepNavigate = {
-        type: "NAVIGATE",
+export function constructMoveStep(position: Position, roomName: RoomName, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.NAVIGATE, defaults, {
         destination: {
             room: roomName,
             position
         }
-    }
-    return navigation;
+    });
 }
 
-export function constructHarvestSourceStep(sourceId: SourceId): TaskStep {
-    const harvest : TaskStepHarvest = {
-        type: "HARVEST",
+export function constructHarvestSourceStep(sourceId: SourceId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.HARVEST, defaults, {
         sourceId
-    }
-    return harvest;
+    });
 }
 
-export function constructStepTransfer(targetId: ObjectId): TaskStep {
-    const transfer : TaskStepTransfer = {
-        type: "TRANSFER",
+export function constructStepTransfer(targetId: ObjectId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.TRANSFER, defaults, {
+        targetId,
+    });
+}
+
+export function constructStepUpgrade(targetId: ObjectId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.UPGRADE, defaults, {
         targetId
-    }
-    return transfer;
+    });
 }
 
 export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): Position {
@@ -99,42 +121,78 @@ export function getSourceIdForTarget(source: SourceTarget, currentPosition: Room
     return sourceObject.id;
 }
 
-export function provisioningStep(task: ProvisionTask, creep: Creep): TaskStep {
+export function aquireEnergy(source: SourceTarget, currentPosition: RoomPosition, init: boolean): TaskStep {
+    const sourcePosition : Position = findNearestSourceTarget(currentPosition, source);
+
+    const adjacent : boolean = currentPosition.isNearTo(sourcePosition.x, sourcePosition.y);
+    if (!adjacent) {
+        return constructMoveStep(sourcePosition, source.room, {init, final: false});
+    }
+    const sourceId : SourceId = getSourceIdForTarget(source, currentPosition);
+    return constructHarvestSourceStep(sourceId, {init, final: false});
+}
+
+export function energyTransmission(
+    task: Task,
+    creep: Creep,
+    init: boolean,
+    memory: any,
+    transmissionStep: (taskTarget: EnergyTarget, final: boolean) => TaskStep): TaskStep {
 
     const carryAmount : number = creep.carry.energy || 0; //FIXME mixed loads
     const carryCapacity : number = creep.carryCapacity;
     const currentPosition : RoomPosition = creep.pos;
 
+    const taskTarget : EnergyTarget = task.target;
+
+    if (init) {
+        memory.state = "AQUIRE";
+    }
+
     //FIXME check if close to source
-    if (carryAmount > carryCapacity * 0.9) {
-        const taskTarget : EnergyTarget = task.target;
+    if (carryAmount > carryCapacity * 0.99) {
+        memory.state = "TRANSMIT";
+    }
+
+    if (memory.state === "TRANSMIT") {
+        if (carryAmount === 0) {
+            return constructStep("NOOP", {}, {final: true, init});
+        }
         const targetPosition : Position = findNavigationTargetById(taskTarget.targetId);
 
         const adjacent : boolean = currentPosition.isNearTo(targetPosition.x, targetPosition.y);
         if (adjacent) {
-            return constructStepTransfer(taskTarget.targetId);
+            return transmissionStep(taskTarget, false);
         }
 
-        return constructMoveStep(targetPosition, taskTarget.room);
+        return constructMoveStep(targetPosition, taskTarget.room, {init, final: false});
     }
 
     const source : SourceTarget = task.source;
-    const sourcePosition : Position = findNearestSourceTarget(currentPosition, source);
-
-    const adjacent : boolean = currentPosition.isNearTo(sourcePosition.x, sourcePosition.y);
-    if (adjacent) {
-        const sourceId : SourceId = getSourceIdForTarget(source, currentPosition);
-        return constructHarvestSourceStep(sourceId);
-    }
-    return constructMoveStep(sourcePosition, source.room);
+    return aquireEnergy(source, currentPosition, init);
 }
 
-export function getNextStep(task: Task, creep: Creep): TaskStep {
+
+export function provisioningStep(task: ProvisionTask, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
+    return energyTransmission(task, creep, init, memory, (taskTarget: EnergyTarget, final: boolean) => {
+        return constructStepTransfer(taskTarget.targetId, {final, init});
+    });
+}
+
+export function upgradeStep(task: UpgradeTask, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
+    return energyTransmission(task, creep, init, memory, (taskTarget: EnergyTarget, final: boolean) => {
+        return constructStepUpgrade(taskTarget.targetId, {final, init});
+    });
+}
+
+export function getNextStep(task: Task, creep: Creep, state: TaskState, memory: TaskMemory): TaskStep {
+    const init : boolean = (state === TaskStates.ASSIGNED);
     if (task.type === TaskTypes.PROVISION) {
-        return provisioningStep(task, creep);
+        return provisioningStep(task, creep, init, memory);
+    }
+    if (task.type === TaskTypes.UPGRADE) {
+        return upgradeStep(task, creep, init, memory);
     }
     warn("[tasks] [" + creep.name+ "] unknown task type " + task.type);
-    return {
-        type: "NOOP"
-    }
+    return constructStep("NOOP", {}, {final: true, init});
 }
