@@ -267,8 +267,10 @@ it('should be done if energy transmitted', function() {
     const creep : Creep = Game.creeps["Leo"];
     creep.carry.energy = 0;
     creep.carryCapacity = 100;
+    const cb = jest.fn();
 
-    const step : TaskStep = dut.energyTransmission(Tasks.validUpgrade, creep, false, {state: "TRANSMIT"});
+    const step : TaskStep = dut.energyTransmission(Tasks.validUpgrade, creep, false, {state: "TRANSMIT"}, cb);
 
     expect(step).toMatchObject({type: "NOOP", final: true});
+    expect(cb).not.toBeCalled();
 });
