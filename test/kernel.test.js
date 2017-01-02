@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder, CreepBody } from "../types/FooTypes.js";
+import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder, CreepBody, TaskStep } from "../types/FooTypes.js";
 
 // get flow to recognize the existing "_" as lodash
 import typeof * as Lodash from "lodash";
@@ -221,6 +221,26 @@ it('should design an affordable creep according to task', function() {
     expect(design).toEqual([WORK, CARRY, MOVE, CARRY, MOVE]);
 });
 
+it('should initialze task memory if not present', function() {
+    const id : TaskId = "test-task-1234";
+
+    dut.init(Game, Memory);
+    const memory = dut.getMemoryByTask(id);
+
+    expect(memory).toEqual({});
+    expect(Memory.kernel.virtual.tasks[id]).toBeDefined();
+});
+
+it('should return task memory if present', function() {
+    const id : TaskId = "test-task-1234";
+
+    Memory.kernel.virtual.tasks[id].memory = {present: true};
+    dut.init(Game, Memory);
+    const memory = dut.getMemoryByTask(id);
+
+    expect(memory.present).toBe(true);
+});
+
 it('should error if processing creep has no task', function() {
     ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(null);
 
@@ -241,7 +261,7 @@ it('should error if processing creep has unknwon task', function() {
     expect(Monitoring.error).toBeCalled();
 });
 
-it('should get next step for task', function() {
+fit('should get next step for task', function() {
     const validHolder : TaskHolder = Testdata.Tasks.validHolder;
 
     ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
@@ -259,4 +279,27 @@ it('should get next step for task', function() {
 
     expect(Tasks.getNextStep).toBeCalled();
     expect(Creeps.processTaskStep).toBeCalled();
+    expect(validHolder.meta.state).toBe(TaskStates.RUNNING);
+});
+
+fit('should set task to finished on final step', function() {
+    const validHolder : TaskHolder = _.cloneDeep(Testdata.Tasks.validHolder);
+    const step : TaskStep = _.cloneDeep(Testdata.Tasks.validStep);
+    step.final = true;
+
+    ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
+    ((Tasks.getNextStep: any): JestMockFn).mockReturnValue(step);
+    ((Creeps.processTaskStep: any): JestMockFn).mockReturnValue({success: true});
+
+    Memory.kernel.scheduler.tasks[validHolder.id] = validHolder;
+
+    dut.init(Game, Memory);
+
+    const creep : Creep = Game.creeps["Flix"];
+
+    //when
+    dut.processTask(creep);
+
+    expect(validHolder.meta.state).toBe(TaskStates.FINISHED);
+    expect(Creeps.lift).toBeCalled();
 });

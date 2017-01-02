@@ -20,6 +20,8 @@ import * as Tasks from "../src/tasks.js";
 import * as Creeps from "../src/creeps.js";
 import * as Rooms from "../src/rooms.js";
 
+import * as Testdata from "../test/testdata.js";
+
 it('should check cpu overrun', function() {
     Memory.finished = false;
     Game.time = 123;
@@ -73,7 +75,10 @@ it('should record stats', function() {
 
 
 it('should create provision task in bootup', function() {
-    ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(1);
+    const holder = Testdata.Tasks.validHolder;
+    ((Kernel.getLocalCount: any): JestMockFn).mockImplementation((name, fn) => {
+        fn(holder); return 0;
+    });
     ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([Game.spawns["Spawn1"]]);
 
     const room : Room = Game.rooms["N0W0"];

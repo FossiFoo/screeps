@@ -6,6 +6,7 @@ declare var _ : Lodash;
 
 // types
 import type { CreepBody, FooMemory, Task, TaskId,
+              TaskHolder, TaskState,
               SourceTarget, EnergyTargetSpawn, EnergyTargetController } from "../types/FooTypes.js";
 
 // API
@@ -21,7 +22,7 @@ import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes, TaskStates } from "./consts";
+import { TaskTypes, TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes, TaskStates } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
@@ -71,8 +72,14 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     if (_.size(creeps) <= BOOTUP_THRESHOLD) {
         warn("[main] [" + room.name + "] bootup mode active");
 
-        const openTaskCount : number = Kernel.getLocalCountForState(room.name, TaskStates.WAITING); // FIXME check better
-        if (openTaskCount > 1) {
+        // FIXME check better
+        const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+            const state : TaskState = holder.meta.state;
+            return holder.task.type === TaskTypes.PROVISION &&
+                   (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
+        });
+
+        if (openTaskCount > 0) {
             debug("[main] [" + room.name + "] [bootup] has too many pending jobs");
             return;
         }
