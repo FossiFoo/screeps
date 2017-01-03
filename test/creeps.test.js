@@ -67,6 +67,15 @@ it('should assign task to creep', function() {
     expect(creep.memory.task.assignedId).toBe(taskId);
 });
 
+it('should lift a creep of its task', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    const taskId : TaskId = "test-manual-12345";
+    dut.lift(creep, taskId);
+
+    expect(Monitoring.warn).toBeCalled();
+    expect(creep.memory.task.assignedId).toBeNull();
+});
+
 it('should get the assigned task from memory', function() {
     const creep : Creep = Game.creeps["Leo"];
     const taskId : TaskId = "test-manual-1234";
@@ -116,12 +125,12 @@ it('should move the creep on a navigation step', function() {
 
 it('should error if creep cant move on a navigation step', function() {
     const creep : Creep = Game.creeps["Leo"];
-    creep.moveTo.mockReturnValueOnce(ERR_TIRED);
+    creep.moveTo.mockReturnValueOnce(ERR_NO_PATH);
 
     const result = dut.navigate(creep, Tasks.validStep);
 
     expect(Monitoring.warn).toBeCalled();
-    expect(result.error).toBe("" + ERR_TIRED);
+    expect(result.error).toBe("" + ERR_NO_PATH);
 });
 
 it('should harvest on a harvest step', function() {
@@ -240,6 +249,46 @@ it('should error if upgrade fails', function() {
     const result = dut.upgrade(creep, {type: "UPGRADE", sourceId: "Source"});
 
     expect(creep.upgradeController).toBeCalled();
+    expect(Monitoring.warn).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should build on a build step', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.build.mockReturnValueOnce(OK);
+
+    const result = dut.build(creep, {type: "BUILD", sourceId: "Source"});
+
+    expect(creep.build).toBeCalled();
+    expect(result.success).toBeTruthy();
+});
+
+it('should error if source not found on build', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue(null);
+
+    const creep : Creep = Game.creeps["Leo"];
+
+    const result = dut.build(creep, {type: "BUILD", sourceId: "Source"});
+
+    expect(creep.build).not.toBeCalled();
+    expect(Monitoring.error).toBeCalled();
+    expect(result.error).toBeTruthy();
+});
+
+it('should error if build fails', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue("Source");
+
+    const creep : Creep = Game.creeps["Leo"];
+    creep.build.mockReturnValueOnce(ERR_NOT_IN_RANGE);
+
+    const result = dut.build(creep, {type: "BUILD", sourceId: "Source"});
+
+    expect(creep.build).toBeCalled();
     expect(Monitoring.warn).toBeCalled();
     expect(result.error).toBeTruthy();
 });

@@ -96,6 +96,7 @@ it('should generate stats', function() {
         {"Spawn1": spawn},
         validGCL,
         validCPU,
+        0,
         0
     );
 

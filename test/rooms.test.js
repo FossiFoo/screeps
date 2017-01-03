@@ -35,3 +35,21 @@ it('should return all spawns for the room', function() {
     const spawns : Spawn[] = dut.getSpawns(room);
     expect(spawns.length).toBe(1);
 });
+
+it('should return construction sites', function() {
+    const room : Room = Game.rooms["N0W0"];
+    room.find.mockReturnValueOnce(["bar"]);
+
+    const constructionSite : ConstructionSite[] = dut.getConstructionSites(room);
+    expect(constructionSite.length).toBe(1);
+});
+
+it('should return extensions', function() {
+    const room : Room = Game.rooms["N0W0"];
+    room.find.mockReturnValueOnce([{structureType: STRUCTURE_EXTENSION},
+                                   {structureType: STRUCTURE_EXTENSION},
+                                   {structureType: STRUCTURE_SPAWN}]);
+
+    const extensions : Extension[] = dut.getExtensions(room);
+    expect(extensions.length).toBe(2);
+});

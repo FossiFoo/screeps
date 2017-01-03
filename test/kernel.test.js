@@ -34,7 +34,52 @@ it('should init', function() {
     expect(dut.Memory).toBeDefined();
 });
 
+it('should collect garbage for creep', function() {
+
+    // local waiting
+    Memory.kernel.scheduler.tasks = {};
+    const validId : TaskId = "test-task-valid-1234";
+    const validTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    Memory.kernel.scheduler.tasks[validId] = {id: validId, task: validTask, meta: _.cloneDeep(Testdata.Tasks.validMeta)};
+    const otherValidId : TaskId = "test-task-valid-1235";
+    const otherTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    otherTask.prio = TaskPriorities.IDLE;
+    Memory.kernel.scheduler.tasks[otherValidId] = {id: otherValidId, task: otherTask, meta: _.cloneDeep(Testdata.Tasks.validMeta)};
+
+    // local running
+    const runningId : TaskId = "test-task-running-1236";
+    const runningTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    const runningMeta: TaskMeta = _.cloneDeep(Testdata.Tasks.validMeta);
+    runningMeta.state = TaskStates.RUNNING;
+    Memory.kernel.scheduler.tasks[runningId] = {id: runningId, task: runningTask, meta: runningMeta};
+
+    // remote waiting
+    const remoteId : TaskId = "test-task-remote-1235";
+    const remoteTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    remoteTask.assignedRoom = "N0E99";
+    Memory.kernel.scheduler.tasks[remoteId] = {id: remoteId, task: remoteTask, meta: _.cloneDeep(Testdata.Tasks.validMeta)};
+
+    // local aborted
+    const abortedId : TaskId = "test-task-aborted-1236";
+    const abortedTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    const abortedMeta: TaskMeta = _.cloneDeep(Testdata.Tasks.validMeta);
+    abortedMeta.state = TaskStates.ABORTED;
+    Memory.kernel.scheduler.tasks[abortedId] = {id: abortedId, task: abortedTask, meta: abortedMeta};
+
+    dut.init(Game, Memory);
+    dut.collectGarbage("Foo", "test-task-valid-1234");
+
+    expect(Memory.kernel.scheduler.tasks[validId]).not.toBeDefined();
+    expect(Memory.kernel.scheduler.tasks[abortedId]).not.toBeDefined();
+
+    expect(Memory.kernel.scheduler.tasks[otherValidId]).toBeDefined();
+    expect(Memory.kernel.scheduler.tasks[runningId]).toBeDefined();
+});
+
 it('should add task to list', function() {
+    Memory.kernel.scheduler.tasks = {};
+
+    dut.init(Game, Memory);
     const taskId : ?TaskId = dut.addTask(Testdata.Tasks.valid);
     expect(taskId).toBeDefined();
 
@@ -82,25 +127,25 @@ it('should get local waiting task', function() {
     // local waiting
     Memory.kernel.scheduler.tasks = {};
     const validId : TaskId = "test-task-valid-1234";
-    const validTask : Task = Testdata.Tasks.valid;
-    Memory.kernel.scheduler.tasks[validId] = {id: validId, task: validTask, meta: Testdata.Tasks.validMeta};
+    const validTask : Task = _.cloneDeep(Testdata.Tasks.valid);
+    Memory.kernel.scheduler.tasks[validId] = {id: validId, task: validTask, meta: _.cloneDeep(Testdata.Tasks.validMeta)};
     const otherValidId : TaskId = "test-task-valid-1235";
     const otherTask : Task = _.cloneDeep(Testdata.Tasks.valid);
     otherTask.prio = TaskPriorities.IDLE;
-    Memory.kernel.scheduler.tasks[otherValidId] = {id: otherValidId, task: otherTask, meta: Testdata.Tasks.validMeta};
+    Memory.kernel.scheduler.tasks[otherValidId] = {id: otherValidId, task: otherTask, meta: _.cloneDeep(Testdata.Tasks.validMeta)};
 
     // local running
     const runningId : TaskId = "test-task-running-1236";
-    const runningTask : Task = Testdata.Tasks.valid;
+    const runningTask : Task = _.cloneDeep(Testdata.Tasks.valid);
     const runningMeta: TaskMeta = _.cloneDeep(Testdata.Tasks.validMeta);
     runningMeta.state = TaskStates.RUNNING;
-    Memory.kernel.scheduler.tasks[runningId] = {id: "", task: runningTask, meta: runningMeta};
+    Memory.kernel.scheduler.tasks[runningId] = {id: runningId, task: runningTask, meta: runningMeta};
 
     // remote waiting
     const remoteId : TaskId = "test-task-remote-1235";
     const remoteTask : Task = _.cloneDeep(Testdata.Tasks.valid);
     remoteTask.assignedRoom = "N0E99";
-    Memory.kernel.scheduler.tasks[remoteId] = {id: remoteId, task: remoteTask, meta: Testdata.Tasks.validMeta};
+    Memory.kernel.scheduler.tasks[remoteId] = {id: remoteId, task: remoteTask, meta: _.cloneDeep(Testdata.Tasks.validMeta)};
 
     dut.init(Game, Memory);
 
@@ -146,6 +191,11 @@ it('should get count of local waiting tasks', function() {
     const taskCount : number = dut.getLocalCountForState(room, TaskStates.WAITING);
 
     expect(taskCount).toBe(2);
+});
+
+it('should return local count', function() {
+    const count : number = dut.getLocalCount("N0W0", () => true);
+    expect(count).toBe(3);
 });
 
 it('should assign task to creep', function() {
@@ -261,7 +311,7 @@ it('should error if processing creep has unknwon task', function() {
     expect(Monitoring.error).toBeCalled();
 });
 
-fit('should get next step for task', function() {
+it('should get next step for task', function() {
     const validHolder : TaskHolder = Testdata.Tasks.validHolder;
 
     ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
@@ -282,7 +332,7 @@ fit('should get next step for task', function() {
     expect(validHolder.meta.state).toBe(TaskStates.RUNNING);
 });
 
-fit('should set task to finished on final step', function() {
+it('should set task to finished on final step', function() {
     const validHolder : TaskHolder = _.cloneDeep(Testdata.Tasks.validHolder);
     const step : TaskStep = _.cloneDeep(Testdata.Tasks.validStep);
     step.final = true;

@@ -7,6 +7,7 @@ declare var _ : Lodash;
 import type { Tick, TaskPrio, Task, TaskStepType, TaskState,
               SourceTarget, EnergyTarget, ProvisionTask, SourceId,
               UpgradeTask, EnergyTargetController,
+              TaskBuild, EnergyTargetConstruction,
               TaskStep, TaskStepNavigate, TaskStepHarvest, TaskStepTransfer, TaskStepUpgrade,
               TaskMemory,
               Position } from "../types/FooTypes.js";
@@ -45,11 +46,23 @@ export function constructUpgrade(now: Tick, prio: TaskPrio, source: SourceTarget
     }
 }
 
-export function findNavigationTargetById(id: ObjectId): Position {
+export function constructBuild(now: Tick, prio: TaskPrio, source: SourceTarget, target: EnergyTargetConstruction): TaskBuild {
+    return {
+        type: TaskTypes.BUILD,
+        assignedRoom: target.room,
+        source,
+        target,
+        created: now,
+        updated: now,
+        prio
+    }
+}
+
+export function findNavigationTargetById(id: ObjectId): ?Position {
     const obj : ?RoomObject = Game.getObjectById(id);
     if (!obj) {
         warn("[tasks] can not see object " + id);
-        return {x:0, y:0};
+        return null;
     }
 
     const sourcePosition : RoomPosition = obj.pos;
@@ -99,7 +112,13 @@ export function constructStepUpgrade(targetId: ObjectId, defaults: Object): Task
     });
 }
 
-export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): Position {
+export function constructStepBuild(targetId: ObjectId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.BUILD, defaults, {
+        targetId
+    });
+}
+
+export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): ?Position {
     if (source.type === SourceTargets.FIXED) {
         const sourceId : SourceId = source.id;
         return findNavigationTargetById(sourceId);
@@ -122,7 +141,10 @@ export function getSourceIdForTarget(source: SourceTarget, currentPosition: Room
 }
 
 export function aquireEnergy(source: SourceTarget, currentPosition: RoomPosition, init: boolean): TaskStep {
-    const sourcePosition : Position = findNearestSourceTarget(currentPosition, source);
+    const sourcePosition : ?Position = findNearestSourceTarget(currentPosition, source);
+    if (!sourcePosition) {
+        return constructStep("NOOP", {}, {final: true, init});
+    }
 
     const adjacent : boolean = currentPosition.isNearTo(sourcePosition.x, sourcePosition.y);
     if (!adjacent) {
@@ -158,7 +180,10 @@ export function energyTransmission(
         if (carryAmount === 0) {
             return constructStep("NOOP", {}, {final: true, init});
         }
-        const targetPosition : Position = findNavigationTargetById(taskTarget.targetId);
+        const targetPosition : ?Position = findNavigationTargetById(taskTarget.targetId);
+        if (!targetPosition) {
+            return constructStep("NOOP", {}, {final: true, init});
+        }
 
         const adjacent : boolean = currentPosition.isNearTo(targetPosition.x, targetPosition.y);
         if (adjacent) {
@@ -185,6 +210,12 @@ export function upgradeStep(task: UpgradeTask, creep: Creep, init: boolean, memo
     });
 }
 
+export function buildStep(task: TaskBuild, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
+    return energyTransmission(task, creep, init, memory, (taskTarget: EnergyTarget, final: boolean) => {
+        return constructStepBuild(taskTarget.targetId, {final, init});
+    });
+}
+
 export function getNextStep(task: Task, creep: Creep, state: TaskState, memory: TaskMemory): TaskStep {
     const init : boolean = (state === TaskStates.ASSIGNED);
     if (task.type === TaskTypes.PROVISION) {
@@ -192,6 +223,9 @@ export function getNextStep(task: Task, creep: Creep, state: TaskState, memory: 
     }
     if (task.type === TaskTypes.UPGRADE) {
         return upgradeStep(task, creep, init, memory);
+    }
+    if (task.type === TaskTypes.BUILD) {
+        return buildStep(task, creep, init, memory);
     }
     warn("[tasks] [" + creep.name+ "] unknown task type " + task.type);
     return constructStep("NOOP", {}, {final: true, init});

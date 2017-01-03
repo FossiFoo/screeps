@@ -4,7 +4,8 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { FooMemory, RoomStats, SpawnStats, GCLStats, CPUStats, StatsMemory, SpawnMemory } from "../types/FooTypes.js";
+import type { FooMemory, RoomStats, SpawnStats, GCLStats, CPUStats, StatsMemory, SpawnMemory, Tick, TaskHolder, TaskState } from "../types/FooTypes.js";
+import { TaskStates } from "./consts"
 import { debug, info } from "./monitoring";
 
 const REPORT_FREQUENCY = 10;
@@ -72,10 +73,12 @@ export function generateStats(
     spawns: SpawnMap,
     gcl: GlobalControlLevel,
     cpu: CPU,
-    lastTick: number): StatsMemory {
+    lastTick: number,
+    lastReport: Tick): StatsMemory {
 
     let stats = {};
     stats.time = time;
+    stats.lastReport = time;
 
     stats.room = {};
     for (let roomKey:string in rooms) {
@@ -128,10 +131,40 @@ export function reportStats(tick: number, stats: StatsMemory) {
 
 export function recordStats(Game: GameI, Memory: FooMemory): void {
     const time: number = Game.time;
-    const lastTime: number = Memory.stats.time;
     const lastTick: number = Memory.stats.cpu.getUsed;
-    Memory.stats = generateStats(time, Game.rooms, Game.spawns, Game.gcl, Game.cpu, lastTick);
-    if ((time - lastTime) > REPORT_FREQUENCY) {
+    const lastReport : Tick = Memory.stats.lastReport;
+    const doReport : boolean = (time - lastReport) > REPORT_FREQUENCY;
+
+    if (doReport) {
         reportStats(Game.time, Memory.stats);
     }
+
+    Memory.stats = generateStats(time, Game.rooms, Game.spawns, Game.gcl, Game.cpu, lastTick, doReport ? time : lastReport);
+
+    const noTasks : number = _.size(Memory.kernel.scheduler.tasks);
+    const noTasksByState : {[name: TaskState]: number} =
+        _.countBy(Memory.kernel.scheduler.tasks, (h: TaskHolder) => {
+            return h.meta.state;
+        });
+    const noTasksWaiting : number = noTasksByState[TaskStates.WAITING] || 0;
+    const noTasksAssigned : number = noTasksByState[TaskStates.ASSIGNED] || 0;
+    const noTasksRunning : number = noTasksByState[TaskStates.RUNNING] || 0;
+    const noTasksBlocked : number = noTasksByState[TaskStates.BLOCKED] || 0;
+    const noTasksFinished : number = noTasksByState[TaskStates.FINISHED] || 0;
+    const noTasksAborted : number = noTasksByState[TaskStates.ABORTED] || 0;
+
+    const runningTasks : TaskHolder[] = _.filter(Memory.kernel.scheduler.tasks, (h) => h.meta.state === "RUNNING");
+    const runByType : {[name: string]: number} = _.countBy(runningTasks, (h) => h.task.type);
+
+    let types : string = "";
+    for (let i in runByType) {
+        types = types + i.substr(0, 3) + ": " + runByType[i] + " ";
+    }
+    const noCreeps : number = _.size(Game.creeps);
+    const noCreepsMem : number = _.size(Memory.creeps);
+    info("==========================");
+    info(`Tasks: ${noTasks}: ${noTasksWaiting}/${noTasksAssigned}/${noTasksRunning}/${noTasksBlocked}/${noTasksFinished}/${noTasksAborted}`);
+    info(`Types: ${types}`);
+    info(`Creeps: ${noCreeps} Mem: ${noCreepsMem} CPU: ${Game.cpu.bucket}`);
+    info("==========================");
 }

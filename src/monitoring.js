@@ -11,7 +11,9 @@ import Memory from "./ApiMemory";
 
 import * as Config from "./config";
 
-export let DEBUG_ENABLED: boolean = Config.DEBUG_ENABLED || false;
+export let DEBUG_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_DEBUG) || false;
+export let INFO_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_INFO) || false;
+export let WARN_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_WARN) || false;
 
 export function init(): void {
 }
@@ -43,11 +45,15 @@ export function error(...args: any[]): void {
 }
 
 export function warn(...args: any[]): void {
-    consoleLog(makeLogMsg("WARN", args));
+    if (WARN_ENABLED) {
+        consoleLog(makeLogMsg("WARN", args));
+    }
 }
 
 export function info(...args: any[]): void {
-    consoleLog(makeLogMsg("INFO", args));
+    if (INFO_ENABLED) {
+        consoleLog(makeLogMsg("INFO", args));
+    }
 }
 
 export function debug(...args: any[]): void {

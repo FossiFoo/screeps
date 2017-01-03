@@ -6,6 +6,7 @@ import type { Task, TaskId, TaskState, TaskPrio,
               TaskStepHarvest, SourceId,
               TaskStepTransfer,
               TaskStepUpgrade,
+              TaskStepBuild,
               CreepMemory, CreepState } from "../types/FooTypes.js";
 
 import { CREEP_MEMORY_VERSION } from "./consts";
@@ -15,7 +16,7 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 import { TaskStates, CreepStates } from "./consts";
-import { debug, warn, error } from "./monitoring";
+import { debug, info, warn, error } from "./monitoring";
 
 export function memory(creep: Creep): CreepMemory {
     if (creep.memory.version === CREEP_MEMORY_VERSION) {
@@ -34,11 +35,16 @@ export function memory(creep: Creep): CreepMemory {
 
 export function assign(creep: Creep, taskId: TaskId, task: Task): void {
     var mem : CreepMemory = memory(creep);
+    warn(`[creep] [${creep.name}] assigned: ${taskId}`);
     mem.task.assignedId = taskId;
 }
 
 export function lift(creep: Creep, taskId: TaskId): void {
-    var mem : CreepMemory = memory(creep);
+    const mem : CreepMemory = memory(creep);
+    const assignedId : ?TaskId = mem.task.assignedId;
+    if (assignedId && assignedId !== taskId) {
+        warn(`[creep] [${creep.name}] assigned id ${assignedId} doesn't match: ${taskId}`);
+    }
     mem.task.assignedId = null;
 }
 
@@ -67,7 +73,7 @@ export function navigate(creep: Creep, stepParam: any): TaskStepResult {
 
     const result : CreepMoveToReturn = creep.moveTo(position.x, position.y);
 
-    if (result !== OK) {
+    if (result !== OK && result !== ERR_TIRED) {
         warn("[creep] [" + creep.name + "] can't navigate " + result);
         return {error: "" + result};
     }
@@ -125,11 +131,29 @@ export function upgrade(creep: Creep, stepParam: any): TaskStepResult {
     return {success: true};
 }
 
+export function build(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepBuild = stepParam;
+
+    const targetId : ObjectId = step.targetId;
+    const target : ?ConstructionSite = Game.getObjectById(targetId);
+    if (!target) {
+        error("[creep] [" + creep.name + "] can't find target " + targetId);
+        return {error: "unknown object: " + targetId};
+    }
+    const result : CreepBuildReturn = creep.build(target);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't upgrade " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
 const stepFunctions = {
     "NAVIGATE": navigate,
     "HARVEST": harvest,
     "TRANSFER": transfer,
     "UPGRADE": upgrade,
+    "BUILD": build,
     "NOOP": noop
 }
 

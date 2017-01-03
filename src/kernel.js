@@ -40,6 +40,25 @@ export function init(Game: GameI, mem: FooMemory): void {
     Memory = mem.kernel;
 };
 
+export function collectGarbage(creepName: CreepName, id: TaskId) {
+    const holder : ?TaskHolder = getHolderById(id);
+    if (!holder) {
+        return;
+    }
+    warn(`[kernel] [garbage] aborting ${id}`);
+    holder.meta.state = TaskStates.ABORTED;
+    holder.meta.assigned = "";
+
+    const cleanupTasks : TaskHolder[] = _.filter(Memory.scheduler.tasks, (holder: TaskHolder) => {
+        return holder.meta.assigned === creepName ||
+               holder.meta.state === TaskStates.ABORTED;
+    });
+    for (let h : TaskHolder of cleanupTasks) {
+        delete Memory.scheduler.tasks[h.id];
+    }
+    // virtual
+}
+
 function makeTaskHolder(id: TaskId, task: Task, meta: TaskMeta): TaskHolder {
     return {
         id,
@@ -66,7 +85,7 @@ export function addTask(task: Task): ?TaskId {
     const id: string = makeTaskId(room);
     const meta: TaskMeta = makeTaskMeta(TaskStates.WAITING, room, {x:0, y:0});
     Memory.scheduler.tasks[id] = makeTaskHolder(id, task, meta);
-    info("[kernel] added new task " + id);
+    warn("[kernel] added new task " + id);
     return id;
 }
 
@@ -93,7 +112,7 @@ export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
     const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, TaskStates.WAITING));
     const sortedTasks : TaskHolder[] = _.sortBy(localTasks, (holder: TaskHolder): TaskPrio => holder.task.prio);
     const first : ?TaskHolder = _.last(sortedTasks); // highest prio
-    info("[Kernel] found " + (first ? first.id : "no") + " as next task for " + room);
+    info("[Kernel] found " + (first ? first.id : "none") + " as next task for " + room);
     return first && first.id;
 }
 
@@ -127,7 +146,7 @@ export function assign(id: TaskId, creep: Creep): void {
         return;
     }
 
-    info(`[Kernel] assigned ${id} to ${creep.name}`);
+    warn(`[Kernel] assigned ${id} to ${creep.name}`);
     holder.meta.assigned = creep.name;
     holder.meta.state = TaskStates.ASSIGNED;
     Creeps.assign(creep, id, holder.task);
@@ -158,11 +177,12 @@ export function designAffordableCreep(taskId: TaskId, room: Room): ?CreepBody {
     const taskType: TaskType = holder.task.type;
     switch (taskType) {
         case TaskTypes.UPGRADE:
+        case TaskTypes.BUILD:
         case TaskTypes.PROVISION: {
             return designAffordableWorker(maxEnergy);
         }
     }
-    error("[kernel] task type not known " + taskType);
+    error("[kernel] [population] task type not known " + taskType);
     return null;
 }
 
@@ -185,6 +205,7 @@ export function processTask(creep: Creep): void {
     const holder : ?TaskHolder = getHolderById(taskId);
     if (!holder) {
         error("[kernel] [" + creep.name + "] has unknown task " + taskId);
+        Creeps.lift(creep, taskId);
         return;
     }
 

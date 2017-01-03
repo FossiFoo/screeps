@@ -73,31 +73,6 @@ it('should record stats', function() {
     expect(Stats.recordStats).toBeCalled();
 });
 
-
-it('should create provision task in bootup', function() {
-    const holder = Testdata.Tasks.validHolder;
-    ((Kernel.getLocalCount: any): JestMockFn).mockImplementation((name, fn) => {
-        fn(holder); return 0;
-    });
-    ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([Game.spawns["Spawn1"]]);
-
-    const room : Room = Game.rooms["N0W0"];
-    dut.bootup(Kernel, room, Game);
-
-    expect(Tasks.constructProvisioning).toBeCalled();
-    expect(Kernel.addTask).toBeCalled();
-});
-
-it('should not create task if too many already in bootup', function() {
-    ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(3);
-    const room : Room = Game.rooms["N0W0"];
-
-    dut.bootup(Kernel, room, Game);
-
-    expect(Tasks.constructProvisioning).not.toBeCalled();
-    expect(Kernel.addTask).not.toBeCalled();
-});
-
 it('should assign task to creep if idle', function() {
     ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue("test-1234");
     ((Creeps.getState: any): JestMockFn).mockReturnValue(CreepStates.IDLE);
@@ -181,25 +156,4 @@ it('should noop if creep is spawning', function() {
     dut.processTasks(Kernel, creep, Game);
 
     expect(Kernel.processTask).not.toBeCalled();
-});
-
-
-it('should upgrade the controller', function() {
-    ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(1);
-    const room : Room = Game.rooms["N0W0"];
-    dut.upgradeController(Kernel, room);
-
-    expect(Kernel.getLocalCountForState).toBeCalled();
-    expect(Tasks.constructUpgrade).toBeCalled();
-    expect(Kernel.addTask).toBeCalled();
-});
-
-it('should not upgrade the controller if too many tasks', function() {
-    ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(3);
-    const room : Room = Game.rooms["N0W0"];
-    dut.upgradeController(Kernel, room);
-
-    expect(Kernel.getLocalCountForState).toBeCalled();
-    expect(Tasks.constructUpgrade).not.toBeCalled();
-    expect(Kernel.addTask).not.toBeCalled();
 });

@@ -6,9 +6,9 @@ declare var _ : Lodash;
 
 import type { FooMemory, OwnMemory } from "../types/FooTypes.js";
 
-export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
+export function initializeMemory(mem: any | FooMemory): FooMemory {
 
-    if (mem && typeof mem.initialized !== "undefined") {
+    if (mem && mem.initialized === true) {
         return ((mem: any): FooMemory);
     }
 
@@ -32,6 +32,7 @@ export function initializeMemory(mem: MemoryI | FooMemory): FooMemory {
         version: 1,
         stats: {
             time: 0,
+            lastReport: 0,
             room: {},
             spawn: {},
             gcl: validGCLStats,

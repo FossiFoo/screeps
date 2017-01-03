@@ -5,7 +5,8 @@ import type { Task, TaskMeta, TaskHolder,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
               KernelMemory,
               ProvisionTask, SourceTarget, EnergyTargetSpawn, EnergyTarget,
-              UpgradeTask, EnergyTargetController } from "../types/FooTypes.js";
+              UpgradeTask, EnergyTargetController,
+              TaskBuild, EnergyTargetConstruction } from "../types/FooTypes.js";
 
 import { TaskPriorities, TaskTypes, TaskStates, SourceTargets, EnergyTargetTypes } from "../src/consts.js";
 
@@ -25,9 +26,16 @@ const validController : EnergyTargetController = {
     targetId: "test-controller-id"
 }
 
+const validConstruction : EnergyTargetConstruction = {
+    room: validRoomName,
+    type: EnergyTargetTypes.CONSTRUCTION,
+    targetId: "test-construction-id"
+}
+
 export const Targets = {
     valid: validTarget,
-    validController
+    validController,
+    validConstruction
 }
 
 const validSource : SourceTarget = {
@@ -40,9 +48,16 @@ const otherRoomSource : SourceTarget = {
     room: otherRoomName
 }
 
+const fixedSource : SourceTarget = {
+    type: SourceTargets.FIXED,
+    room: validRoomName,
+    id: "test-source-fixed-1"
+}
+
 export const Sources = {
     valid: validSource,
-    otherRoom: otherRoomSource
+    otherRoom: otherRoomSource,
+    fixed: fixedSource
 }
 
 const validTask : ProvisionTask = {
@@ -60,6 +75,16 @@ const validUpgrade : UpgradeTask = {
     assignedRoom: validRoomName,
     source: validSource,
     target: validController,
+    created: 0,
+    updated: 0,
+    prio: TaskPriorities.MAX
+}
+
+const validBuild : TaskBuild = {
+    type: TaskTypes.BUILD,
+    assignedRoom: validRoomName,
+    source: validSource,
+    target: validConstruction,
     created: 0,
     updated: 0,
     prio: TaskPriorities.MAX
@@ -105,9 +130,10 @@ export const Tasks = {
     valid: validTask,
     invalidTypeUnknown: ((invalidTypeUnknown: any): Task),
     validUpgrade,
+    validBuild,
     validMeta: validMeta,
     validHolder: validHolder,
-    validStep: validStep
+    validStep: validStep,
 }
 
 const validGCLStats: GCLStats = {
@@ -126,6 +152,7 @@ const validCPUStats: CPUStats = {
 
 const validStats: StatsMemory = {
     time: 0,
+    lastReport: 0,
     room: {},
     spawn: {},
     gcl: validGCLStats,

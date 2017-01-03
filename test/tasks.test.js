@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Tick, TaskPrio, ProvisionTask, UpgradeTask, Task, TaskStep, TaskStepNavigate, Position, SourceId } from "../types/FooTypes.js";
+import type { Tick, TaskPrio, ProvisionTask, UpgradeTask, TaskBuild, Task, TaskStep, TaskStepNavigate, Position, SourceId } from "../types/FooTypes.js";
 
 // get flow to recognize the existing "_" as lodash
 import typeof * as Lodash from "lodash";
@@ -39,6 +39,13 @@ it('should construct upgrade task', function() {
     const task : UpgradeTask = dut.constructUpgrade(time, TaskPriorities.MAX, Sources.valid, Targets.validController);
 
     expect(task).toEqual(Tasks.validUpgrade);
+});
+
+it('should construct build task', function() {
+    const time: Tick = 0;
+    const task : TaskBuild = dut.constructBuild(time, TaskPriorities.MAX, Sources.valid, Targets.validConstruction);
+
+    expect(task).toEqual(Tasks.validBuild);
 });
 
 it('should get the next step for the task', function() {
@@ -86,7 +93,7 @@ it('should find navigation target by id', function() {
     dut.init(Game, Memory);
     const target = dut.findNavigationTargetById("test-object-1");
 
-    expect(target).toEqual({x:0,y:0});
+    expect(target).toEqual(null);
     expect(Monitoring.warn).toBeCalled();
 });
 
@@ -240,6 +247,26 @@ it('should transfer to target if full and adjacent', function() {
     expect(step).toMatchObject({type: "TRANSFER", targetId: Tasks.valid.target.targetId});
 });
 
+it('should transfer to target if full and adjacent', function() {
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue({pos: {x:10, y:20}});
+
+    const creep : Creep = Game.creeps["Leo"];
+    const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
+    positionMock.isNearTo.mockReturnValueOnce(true);
+    positionMock.roomName = "N0W0";
+    positionMock.x = 1;
+    positionMock.y = 2;
+    creep.pos = positionMock;
+    creep.carry.energy = 99;
+    creep.carryCapacity = 100;
+
+    dut.init(Game, Memory);
+    const step : TaskStep = dut.buildStep(Tasks.validBuild, creep, false, {state: "TRANSMIT"});
+
+    expect(step).toMatchObject({type: "BUILD", targetId: Tasks.validBuild.target.targetId});
+});
+
 
 it('should make a transmission if upgrading', function() {
     const GameMock : GameMock = ((Game: any): GameMock);
@@ -273,4 +300,16 @@ it('should be done if energy transmitted', function() {
 
     expect(step).toMatchObject({type: "NOOP", final: true});
     expect(cb).not.toBeCalled();
+});
+
+it('should return with noop if source not found', function() {
+    const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
+
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue(null);
+
+    dut.init(GameMock, Memory);
+    const step : TaskStep = dut.aquireEnergy(Sources.fixed, positionMock, true);
+
+    expect(step).toMatchObject({type: "NOOP", final: true});
 });
