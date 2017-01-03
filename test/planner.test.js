@@ -1,5 +1,9 @@
 /* @flow */
 
+// get flow to recognize the existing "_" as lodash
+import typeof * as Lodash from "lodash";
+declare var _ : Lodash;
+
 // API
 jest.unmock("../src/ApiGame.js");
 import Game from "../src/ApiGame.js";
@@ -23,11 +27,29 @@ import * as Rooms from "../src/rooms.js";
 import * as Testdata from "../test/testdata.js";
 
 
-it('should create provision task in bootup', function() {
+it('should create provision task for spawn in bootup', function() {
     const holder = Testdata.Tasks.validHolder;
     ((Kernel.getLocalCount: any): JestMockFn).mockImplementation((name, fn) => {
         fn(holder); return 0;
     });
+    const spawn : Spawn = _.cloneDeep(Game.spawns["Spawn1"]);
+    spawn.energy = 10;
+    ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([spawn]);
+    ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([{id: "test-extension-1"}]);
+
+    const room : Room = Game.rooms["N0W0"];
+    dut.bootup(Kernel, room, Game);
+
+    expect(Tasks.constructProvisioning).toBeCalled();
+    expect(Kernel.addTask).toBeCalled();
+});
+
+it('should create provision task for extension in bootup', function() {
+    const holder = Testdata.Tasks.validHolder;
+    ((Kernel.getLocalCount: any): JestMockFn).mockImplementation((name, fn) => {
+        fn(holder); return 0;
+    });
+    // Testdata spawn is full
     ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([Game.spawns["Spawn1"]]);
     ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([{id: "test-extension-1"}]);
 
@@ -71,6 +93,8 @@ it('should not upgrade the controller if too many tasks', function() {
 
 it('should build extension', function() {
     ((Rooms.getConstructionSites: any): JestMockFn).mockReturnValue([{structureType: STRUCTURE_EXTENSION}]);
+    ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(1);
+
     const room : Room = Game.rooms["N0W0"];
 
     dut.buildExtension(Kernel, room);
@@ -82,6 +106,19 @@ it('should build extension', function() {
 
 it('should return if no extension to build', function() {
     ((Rooms.getConstructionSites: any): JestMockFn).mockReturnValue([]);
+    const room : Room = Game.rooms["N0W0"];
+
+    dut.buildExtension(Kernel, room);
+
+    expect(Rooms.getConstructionSites).toBeCalled();
+    expect(Tasks.constructBuild).not.toBeCalled();
+    expect(Kernel.addTask).not.toBeCalled();
+});
+
+it('should not build extension if too busy with building', function() {
+    ((Rooms.getConstructionSites: any): JestMockFn).mockReturnValue([{structureType: STRUCTURE_EXTENSION}]);
+    ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(6);
+
     const room : Room = Game.rooms["N0W0"];
 
     dut.buildExtension(Kernel, room);

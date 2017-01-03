@@ -1,7 +1,10 @@
 /* @flow */
 
 import { TaskStates, TaskTypes, TaskStepTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
-import type { SourceFixed, SourceAny, TaskTypeProvision, TaskTypeUpgrade, EnergyTargetTypeSpawn, EnergyTargetTypeController, CreepMemoryVersion } from "../types/ConstTypes.js";
+import type { SourceFixed, SourceAny,
+              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild,
+              EnergyTargetTypeSpawn, EnergyTargetTypeController, EnergyTargetTypeConstruction,
+              CreepMemoryVersion } from "../types/ConstTypes.js";
 
 export type Predicate<T> = (t: T) => boolean;
 
@@ -34,8 +37,20 @@ export type RoomStats = {
     myRoom: 0 | 1
 };
 
+export type TaskStats = {
+    noTasks: number;
+    noTasksWaiting: number;
+    noTasksAssigned: number;
+    noTasksRunning: number;
+    noTasksBlocked: number;
+    noTasksFinished: number;
+    noTasksAborted: number;
+    types: string;
+}
+
 export type StatsMemory = {
     time: Tick,
+    lastReport: Tick,
     room: {[name: string]: RoomStats},
     spawn: {[name: string]: SpawnStats},
     gcl: GCLStats,
@@ -120,12 +135,16 @@ export type EnergyTargetController = {
     type: EnergyTargetTypeController;
 } & EnergyTargetBase;
 
+export type EnergyTargetConstruction = {
+    type: EnergyTargetTypeConstruction;
+} & EnergyTargetBase;
+
 export type EnergyTargetBase = {
     room: RoomName;
     targetId: ObjectId;
 };
 
-export type EnergyTarget =  EnergyTargetSpawn | EnergyTargetController;
+export type EnergyTarget =  EnergyTargetSpawn | EnergyTargetController | EnergyTargetConstruction;
 
 export type ProvisionTask = {
     type: TaskTypeProvision;
@@ -133,6 +152,10 @@ export type ProvisionTask = {
 
 export type UpgradeTask = {
     type: TaskTypeUpgrade;
+} & TaskEnergyTransmission;
+
+export type TaskBuild = {
+    type: TaskTypeBuild;
 } & TaskEnergyTransmission;
 
 export type TaskEnergyTransmission = {
@@ -147,7 +170,7 @@ export type TaskBase = {
     prio: TaskPrio;
 };
 
-export type Task = ProvisionTask | UpgradeTask;
+export type Task = ProvisionTask | UpgradeTask | TaskBuild;
 
 export type TaskId = string;
 
@@ -206,6 +229,11 @@ export type TaskStepTransfer = {
 
 export type TaskStepUpgrade = {
     type: "UPGRADE",
+    targetId: ObjectId
+} & TaskStep;
+
+export type TaskStepBuild = {
+    type: "BUILD",
     targetId: ObjectId
 } & TaskStep;
 

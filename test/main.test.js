@@ -1,5 +1,7 @@
 /* @flow */
 
+import type { CreepMemory } from "../types/FooTypes.js";
+
 // API
 jest.unmock("../src/ApiGame.js");
 import Game from "../src/ApiGame.js";
@@ -65,6 +67,16 @@ it('should init modules', function() {
     expect(Stats.init).toBeCalled();
     expect(Monitoring.init).toBeCalled();
     expect(Kernel.init).toBeCalled();
+});
+
+it('should collect dead creeps memory', function() {
+    const oldMemory : CreepMemory = {version: "0.0.1", task: {assignedId: "test-garbage-1"}};
+    Memory.creeps["fake"] = oldMemory;
+
+    dut.collectGarbage(Game, Memory);
+
+    expect(Memory.creeps["fake"]).not.toBeDefined();
+    expect(Kernel.collectGarbage).toBeCalledWith("fake", "test-garbage-1");
 });
 
 it('should record stats', function() {

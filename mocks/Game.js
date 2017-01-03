@@ -38,6 +38,7 @@ class TestSpawn extends Spawn {
         this.room = room;
         this.memory = {};
         this.energy = 300;
+        this.energyCapacity = 300;
         this.spawning = null;
         // mock
         this.counter = counter;
