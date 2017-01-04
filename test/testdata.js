@@ -94,7 +94,8 @@ const validMeta : TaskMeta = {
     state: TaskStates.WAITING,
     assigned: null,
     startRoom: validRoomName,
-    startPosition: null
+    startPosition: null,
+    stateChanged: 0
 }
 
 const validHolder : TaskHolder = {

@@ -29,23 +29,7 @@ type KernelType = typeof Kernel;
 import * as Planner from "./planner";
 import * as Creeps from "./creeps";
 import * as Rooms from "./rooms";
-
-
-export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
-    const returnValue: number | string = spawn.createCreep(creepBody);
-
-    if (typeof returnValue !== "string") {
-        switch (returnValue) {
-            case ERR_BUSY: return;
-            case ERR_NOT_ENOUGH_ENERGY: return;
-        }
-        error("[main] ["+ spawn.name + "] create creep failed: " + returnValue);
-        return;
-    }
-
-    debug("[main] ["+ spawn.name + "] creep spawned: " + returnValue);
-    return returnValue;
-}
+import * as BodyShop from "./bodyshop";
 
 export function checkCPUOverrun(mem: FooMemory): void {
     if (mem.finished !== true) {
@@ -88,23 +72,7 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
 }
 
 export function spawnCreepsForLocalTasks(Kernel: KernelType, spawn: Spawn, Game: GameI): ?CreepName {
-    const room: Room = spawn.room;
-    if (spawn.spawning || _.size(Game.creeps) > 20) {
-        return;
-    }
-
-    const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
-    if (!task) {
-        return;
-    }
-
-
-    const creepBody : ?CreepBody = Kernel.designAffordableCreep(task, room);
-    if (!creepBody) {
-        debug(`[main] [${room.name}] no suitable body could be constructed for ${task}`);
-        return;
-    }
-    return createCreep(spawn, creepBody);
+    return BodyShop.spawnCreepForTask(Kernel, spawn, Game);
 }
 
 export function processTasks(Kernel: KernelType, creep: Creep, Game: GameI) {

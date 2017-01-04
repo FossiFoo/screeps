@@ -177,10 +177,11 @@ export type TaskId = string;
 export type TaskState = $Keys<typeof TaskStates>;
 
 export type TaskMeta = {
-    state: TaskState,
-    assigned: ?CreepName,
-    startRoom: RoomName,
-    startPosition: ?Position
+    state: TaskState;
+    assigned: ?CreepName;
+    startRoom: RoomName;
+    startPosition: ?Position;
+    stateChanged: Tick;
 }
 
 export type TaskHolder = {

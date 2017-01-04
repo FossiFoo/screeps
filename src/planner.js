@@ -5,7 +5,7 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 import type { CreepBody, FooMemory, Task, TaskId,
-              TaskHolder, TaskState,
+              TaskHolder, TaskState, TaskPrio,
               SourceTarget, EnergyTarget, EnergyTargetSpawn, EnergyTargetController, EnergyTargetConstruction } from "../types/FooTypes.js";
 
 import { error, warn, info, debug } from "./monitoring";
@@ -87,7 +87,8 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
             type: SourceTargets.ANY,
             room: room.name
         }
-        const harvest: Task = Tasks.constructProvisioning(Game.time, TaskPriorities.URGENT, source, target);
+        const prio : TaskPrio = openTaskCount === 0 ? TaskPriorities.URGENT : TaskPriorities.UPKEEP;
+        const harvest: Task = Tasks.constructProvisioning(Game.time, prio, source, target);
 
         Kernel.addTask(harvest);
     }

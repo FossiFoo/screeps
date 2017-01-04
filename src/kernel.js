@@ -34,26 +34,32 @@ import { debug, info, warn, error } from "./monitoring";
 import * as Creeps from "./creeps";
 import * as Tasks from "./tasks";
 
-export let Memory: KernelMemory;
+import * as Config from "./config";
 
-export function init(Game: GameI, mem: FooMemory): void {
+export const TASK_BLOCKED_LIMIT = Config.TASK_BLOCKED_LIMIT || 10;
+
+export let Memory: KernelMemory;
+export let Game: GameI;
+
+export function init(game: GameI, mem: FooMemory): void {
     Memory = mem.kernel;
+    Game = game;
 };
 
 export function collectGarbage(creepName: CreepName, id: TaskId) {
     const holder : ?TaskHolder = getHolderById(id);
-    if (!holder) {
-        return;
+    if (holder) {
+        warn(`[kernel] [garbage] aborting ${id}`);
+        holder.meta.state = TaskStates.ABORTED;
+        holder.meta.assigned = "";
     }
-    warn(`[kernel] [garbage] aborting ${id}`);
-    holder.meta.state = TaskStates.ABORTED;
-    holder.meta.assigned = "";
 
     const cleanupTasks : TaskHolder[] = _.filter(Memory.scheduler.tasks, (holder: TaskHolder) => {
         return holder.meta.assigned === creepName ||
                holder.meta.state === TaskStates.ABORTED;
     });
     for (let h : TaskHolder of cleanupTasks) {
+        debug(`[kernel] [garbage] collecting ${h.id}`);
         delete Memory.scheduler.tasks[h.id];
     }
     // virtual
@@ -72,7 +78,8 @@ function makeTaskMeta(state: TaskState, startRoom: RoomName, startPosition: Posi
         state,
         startRoom,
         startPosition,
-        assigned: null
+        assigned: null,
+        stateChanged: 0
     }
 };
 
@@ -140,6 +147,14 @@ export function getHolderById(id: TaskId): ?TaskHolder {
     return holder;
 }
 
+export function updateTaskState(holder: TaskHolder, state: TaskState): void {
+    if (holder.meta.state === state) {
+        return;
+    }
+    holder.meta.state = state;
+    holder.meta.stateChanged = Game.time;
+}
+
 export function assign(id: TaskId, creep: Creep): void {
     const holder : ?TaskHolder = getHolderById(id)
     if (!holder) {
@@ -148,42 +163,8 @@ export function assign(id: TaskId, creep: Creep): void {
 
     warn(`[Kernel] assigned ${id} to ${creep.name}`);
     holder.meta.assigned = creep.name;
-    holder.meta.state = TaskStates.ASSIGNED;
+    updateTaskState(holder, TaskStates.ASSIGNED);
     Creeps.assign(creep, id, holder.task);
-}
-
-export function designAffordableWorker(maxEnergy: number): ?CreepBody {
-    const maxCarry : number = maxEnergy - BODYPART_COST["work"];
-    const partsCarry : number = Math.floor(maxCarry / (BODYPART_COST["carry"] + BODYPART_COST["move"]));
-    if (partsCarry < 1) {
-        return null;
-    }
-
-    let body: CreepBody = [WORK];
-    for(let i:number = 0; i < partsCarry; i++) {
-        body.push(CARRY);
-        body.push(MOVE);
-    }
-    return body;
-}
-
-export function designAffordableCreep(taskId: TaskId, room: Room): ?CreepBody {
-    const holder : ?TaskHolder = getHolderById(taskId);
-    if (!holder) {
-        return null;
-    }
-    const maxEnergy : number = room.energyAvailable;
-
-    const taskType: TaskType = holder.task.type;
-    switch (taskType) {
-        case TaskTypes.UPGRADE:
-        case TaskTypes.BUILD:
-        case TaskTypes.PROVISION: {
-            return designAffordableWorker(maxEnergy);
-        }
-    }
-    error("[kernel] [population] task type not known " + taskType);
-    return null;
 }
 
 export function getMemoryByTask(id: TaskId): TaskMemory {
@@ -224,11 +205,13 @@ export function processTask(creep: Creep): void {
 
     // more state handling if finished, blocked, error
     if (!result.success) {
-        if (preStepState === TaskStates.BLOCKED) {
-            //FIXME check time or such
-            warn(`[kernel] [${creep.name}] was blocked twice`);
+        updateTaskState(holder, TaskStates.BLOCKED);
+        const blockedTicks : number = Game.time - holder.meta.stateChanged;
+        if ( blockedTicks > TASK_BLOCKED_LIMIT ) {
+            warn(`[kernel] [${creep.name}] aborting ${taskId} was blocked for ${blockedTicks}`);
+            updateTaskState(holder, TaskStates.ABORTED);
+            Creeps.lift(creep, taskId);
         }
-        holder.meta.state = TaskStates.BLOCKED;
         return;
     }
 

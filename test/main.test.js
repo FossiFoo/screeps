@@ -21,6 +21,7 @@ import * as Kernel from "../src/kernel.js";
 import * as Tasks from "../src/tasks.js";
 import * as Creeps from "../src/creeps.js";
 import * as Rooms from "../src/rooms.js";
+import * as BodyShop from "../src/bodyshop.js";
 
 import * as Testdata from "../test/testdata.js";
 
@@ -32,34 +33,6 @@ it('should check cpu overrun', function() {
     expect(Monitoring.error).toBeCalled();
 });
 
-it('should error on create', function() {
-    const spawn : Spawn = Game.spawns['Spawn1'];
-    spawn.createCreep.mockReturnValueOnce(ERR_NOT_OWNER);
-
-    const err : ?string = dut.createCreep(spawn, []);
-
-    expect(err).not.toBeDefined();
-    expect(Monitoring.error).toBeCalled();
-});
-
-it('should just return on spawn busy', function() {
-    const spawn : Spawn = Game.spawns['Spawn1'];
-    spawn.createCreep.mockReturnValueOnce(ERR_BUSY);
-
-    const err : ?string = dut.createCreep(spawn, []);
-
-    expect(err).not.toBeDefined();
-    expect(Monitoring.error).not.toBeCalled();
-});
-
-it('should return creep name on create', function() {
-    const spawn : Spawn = Game.spawns['Spawn1'];
-    spawn.createCreep.mockReturnValueOnce("foobar");
-
-    const val : ?string = dut.createCreep(spawn, []);
-
-    expect(val).toBe("foobar");
-});
 
 it('should init modules', function() {
     dut.init(Game, Memory);
@@ -108,48 +81,13 @@ it('should not touch creep if busy', function() {
 });
 
 it('should spawn a creep for a local waiting task', function() {
-    ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue("test-1234");
-    ((Kernel.designAffordableCreep: any): JestMockFn).mockReturnValue([]);
+    ((BodyShop.spawnCreepForTask: any): JestMockFn).mockReturnValue("Peter");
 
     const spawn : Spawn = Game.spawns["Spawn2"];
 
     const name : ?CreepName = dut.spawnCreepsForLocalTasks(Kernel, spawn, Game);
 
-    expect(name).toBeDefined();
     expect(name).toBe("Peter");
-});
-
-it('should return if spawn is busy', function() {
-    const spawn : Spawn = Game.spawns["Spawn2"];
-    spawn.spawning = {
-        name: "foo",
-        needTime: 1,
-        remainingTime: 1
-    };
-    const name : ?CreepName = dut.spawnCreepsForLocalTasks(Kernel, spawn, Game);
-
-    expect(name).not.toBeDefined();
-});
-
-it('should return if no task for spawning can be found', function() {
-    ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue(null);
-
-    const spawn : Spawn = Game.spawns["Spawn2"];
-    spawn.spawning = undefined;
-    const name : ?CreepName = dut.spawnCreepsForLocalTasks(Kernel, spawn, Game);
-
-    expect(name).not.toBeDefined();
-});
-
-it('should return if body can be constructed (yet)', function() {
-    ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue("test-1234");
-    ((Kernel.designAffordableCreep: any): JestMockFn).mockReturnValue(null);
-
-    const spawn : Spawn = Game.spawns["Spawn2"];
-    spawn.spawning = undefined;
-    const name : ?CreepName = dut.spawnCreepsForLocalTasks(Kernel, spawn, Game);
-
-    expect(name).not.toBeDefined();
 });
 
 it('should warn if creep is idle', function() {
@@ -168,4 +106,8 @@ it('should noop if creep is spawning', function() {
     dut.processTasks(Kernel, creep, Game);
 
     expect(Kernel.processTask).not.toBeCalled();
+});
+
+it('should call loop', function() {
+    dut.loop();
 });

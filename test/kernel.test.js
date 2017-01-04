@@ -198,6 +198,24 @@ it('should return local count', function() {
     expect(count).toBe(3);
 });
 
+it('should set state change time if updating state', function() {
+    Game.time = 123;
+    dut.init(Game, Memory);
+    const holder : TaskHolder = _.cloneDeep(Testdata.Tasks.validHolder);
+    dut.updateTaskState(holder, TaskStates.ABORTED);
+
+    expect(holder.meta).toMatchObject({state: TaskStates.ABORTED, stateChanged: 123});
+});
+
+it('should not set state change time if not changing state', function() {
+    Game.time = 123;
+    dut.init(Game, Memory);
+    const holder : TaskHolder = _.cloneDeep(Testdata.Tasks.validHolder);
+    dut.updateTaskState(holder, TaskStates.WAITING);
+
+    expect(holder.meta).toMatchObject({state: TaskStates.WAITING, stateChanged: 0});
+});
+
 it('should assign task to creep', function() {
     const id : TaskId = "test-task-1234";
     const mockTask : Task = Testdata.Tasks.valid;
@@ -222,53 +240,6 @@ it('should error on assigning unknown id', function() {
     dut.assign("unknown", creep);
 
     expect(Monitoring.error).toBeCalled();
-});
-
-function checkWorkerBody(energy: number, body: ?CreepBody): void {
-    const design : ?CreepBody = dut.designAffordableWorker(energy);
-    expect(design).toEqual(body);
-}
-
-it('should construct affordable workers', function() {
-    checkWorkerBody(0, null);
-    checkWorkerBody(199, null);
-    checkWorkerBody(200, [WORK, CARRY, MOVE]);
-    checkWorkerBody(250, [WORK, CARRY, MOVE]);
-    checkWorkerBody(300, [WORK, CARRY, MOVE, CARRY, MOVE]);
-});
-
-it('should error if task is unknown', function() {
-    const taskId : TaskId = "test-1234";
-    const room : Room = Game.rooms["N0W0"];
-
-    const design : ?CreepBody = dut.designAffordableCreep(taskId, room);
-    expect(design).toBeNull();
-    expect(Monitoring.error).toBeCalled();
-});
-
-it('should error if task type is unknown', function() {
-    const id : TaskId = "test-task-1234";
-    const mockTask : Task = Testdata.Tasks.invalidTypeUnknown;
-
-    Memory.kernel.scheduler.tasks[id] = {id, task: mockTask, meta: Testdata.Tasks.validMeta};
-    const room : Room = Game.rooms["N0W0"];
-
-    const design : ?CreepBody = dut.designAffordableCreep(id, room);
-
-    expect(design).toBeNull();
-    expect(Monitoring.error).toBeCalled();
-});
-
-
-it('should design an affordable creep according to task', function() {
-    const id : TaskId = "test-task-1234";
-    const mockTask : Task = Testdata.Tasks.valid;
-
-    Memory.kernel.scheduler.tasks[id] = {id, task: mockTask, meta: Testdata.Tasks.validMeta};
-    const room : Room = Game.rooms["N0W0"];
-
-    const design : ?CreepBody = dut.designAffordableCreep(id, room);
-    expect(design).toEqual([WORK, CARRY, MOVE, CARRY, MOVE]);
 });
 
 it('should initialze task memory if not present', function() {
@@ -351,5 +322,31 @@ it('should set task to finished on final step', function() {
     dut.processTask(creep);
 
     expect(validHolder.meta.state).toBe(TaskStates.FINISHED);
+    expect(Creeps.lift).toBeCalled();
+});
+
+
+it('should set task to aborted if blocked for some ticks', function() {
+    const validHolder : TaskHolder = _.cloneDeep(Testdata.Tasks.validHolder);
+    validHolder.meta.state = TaskStates.BLOCKED;
+    validHolder.meta.stateChanged = 0;
+    const step : TaskStep = _.cloneDeep(Testdata.Tasks.validStep);
+    step.final = true;
+
+    ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
+    ((Tasks.getNextStep: any): JestMockFn).mockReturnValue(step);
+    ((Creeps.processTaskStep: any): JestMockFn).mockReturnValue({success: false});
+
+    Game.time = 123;
+    Memory.kernel.scheduler.tasks[validHolder.id] = validHolder;
+
+    dut.init(Game, Memory);
+
+    const creep : Creep = Game.creeps["Flix"];
+
+    //when
+    dut.processTask(creep);
+
+    expect(validHolder.meta.state).toBe(TaskStates.ABORTED);
     expect(Creeps.lift).toBeCalled();
 });
