@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-./node_modules/babel-cli/bin/babel.js --watch --out-dir dist src &
+./node_modules/gulp-cli/bin/gulp.js run &
 sleep 3
 ./sync.js --local

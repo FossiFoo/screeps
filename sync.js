@@ -5,6 +5,7 @@ let path = require('path');
 let fs = require('fs');
 let URL = require('url');
 let child_process = require('child_process');
+var chokidar = require('chokidar');
 
 // Read args
 let argv = {};
@@ -54,11 +55,13 @@ function refreshLocalBranch() {
 
 // Watch for local changes
 let pushTimeout;
-fs.watch('./dist', function(ev, file) {
+chokidar.watch('./*.js', {cwd: "dist/"}).on('change', function(file) {
+    console.info("syncing " + file);
 	if (file !== 'sync.js' && /\.js$/.test(file)) {
 		try {
-			modules[file.replace(/\.js$/, '')] = fs.readFileSync(file, 'utf8');
+			modules[file.replace(/\.js$/, '')] = fs.readFileSync("dist/" + file, 'utf8');
 		} catch (err) {
+                    console.error(err)
 			delete modules[file.replace(/\.js$/, '')];
 		}
 		modules['last-push'] = 'module.exports='+ Date.now()+ ';';
@@ -73,7 +76,8 @@ function schedulePush() {
 		clearTimeout(pushTimeout);
 	}
 	pushTimeout = setTimeout(function() {
-		pushTimeout = undefined;
+	    pushTimeout = undefined;
+            console.log("push")
 		writeListener && writeListener();
 	}, 500);
 }
