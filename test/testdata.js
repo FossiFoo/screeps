@@ -3,7 +3,7 @@
 import type { Task, TaskMeta, TaskHolder,
               TaskStepNavigate,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
-              KernelMemory,
+              KernelMemory, PlannerMemory,
               ProvisionTask, SourceTarget, EnergyTargetSpawn, EnergyTarget,
               UpgradeTask, EnergyTargetController,
               TaskBuild, EnergyTargetConstruction } from "../types/FooTypes.js";
@@ -173,13 +173,17 @@ const validKernel: KernelMemory = {
     }
 }
 
+const validPlanner: PlannerMemory = {
+}
+
 const validMemory: OwnMemory = {
     initialized: true,
     version: 1,
     finished: true,
     stats: validStats,
     monitoring: validMonitoring,
-    kernel: validKernel
+    kernel: validKernel,
+    planner: validPlanner
 };
 
 export const Memorys = {

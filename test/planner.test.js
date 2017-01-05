@@ -73,6 +73,8 @@ it('should not create task if too many already in bootup', function() {
 it('should upgrade the controller', function() {
     ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(1);
     const room : Room = Game.rooms["N0W0"];
+
+    dut.init(Game, Memory);
     dut.upgradeController(Kernel, room);
 
     expect(Kernel.getLocalCountForState).toBeCalled();
@@ -97,6 +99,7 @@ it('should build extension', function() {
 
     const room : Room = Game.rooms["N0W0"];
 
+    dut.init(Game, Memory);
     dut.buildExtension(Kernel, room);
 
     expect(Rooms.getConstructionSites).toBeCalled();

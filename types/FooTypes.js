@@ -6,14 +6,12 @@ import type { SourceFixed, SourceAny,
               EnergyTargetTypeSpawn, EnergyTargetTypeController, EnergyTargetTypeConstruction,
               CreepMemoryVersion } from "../types/ConstTypes.js";
 
-export type Predicate<T> = (t: T) => boolean;
-
 export type Tick = number;
 
 export type Position = {
     x: number,
     y: number
-}
+};
 
 export type GCLStats = {
     level: number,
@@ -46,7 +44,7 @@ export type TaskStats = {
     noTasksFinished: number;
     noTasksAborted: number;
     types: string;
-}
+};
 
 export type StatsMemory = {
     time: Tick,
@@ -57,8 +55,7 @@ export type StatsMemory = {
     cpu: CPUStats
 };
 
-export type ERRORTYPE =
-    "GENERAL";
+export type ERRORTYPE = "GENERAL";
 
 export type ErrorEntry = {
     time: number,
@@ -86,7 +83,11 @@ export type KernelMemory = {
     virtual: {
         tasks: TaskMemoryMap
     }
-}
+};
+
+export type PlannerMemory = {
+
+};
 
 export type OwnMemory = {
     initialized: true,
@@ -94,7 +95,8 @@ export type OwnMemory = {
     finished: boolean,
     stats: StatsMemory,
     monitoring: MonitoringMemory,
-    kernel: KernelMemory
+    kernel: KernelMemory,
+    planner: PlannerMemory
 };
 
 export type FooMemory = OwnMemory & MemoryI;
@@ -247,3 +249,5 @@ export type TaskStep = {
     init: boolean,
     final: boolean
 };
+
+export type Predicate<T> = (t: T) => boolean;

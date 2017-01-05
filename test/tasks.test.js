@@ -97,14 +97,14 @@ it('should find navigation target by id', function() {
     expect(Monitoring.warn).toBeCalled();
 });
 
-it('should find closest target by type', function() {
+it('should return middle if target not found', function() {
 
     const positionMock : RoomPosition = (new RoomPositionMock(0,0,""): any);
     positionMock.findClosestByRange.mockReturnValueOnce(null);
 
     const pos = dut.findClosestNavigationTargetByType(FIND_SOURCES_ACTIVE, positionMock);
 
-    expect(pos).toEqual({x:0,y:0});
+    expect(pos).toEqual({x:25,y:25});
     expect(Monitoring.error).toBeCalled();
 });
 
@@ -121,7 +121,7 @@ it('should find closest target by type', function() {
 it('should return any position if any source target not in correct room', function() {
     const mockPosition : RoomPosition = ({roomName: "N0W0"}: any);
     const pos = dut.findNearestSourceTarget(mockPosition, Sources.otherRoom);
-    expect(pos).toMatchObject({x:0, y:0});
+    expect(pos).toMatchObject({x:25, y:25});
 });
 
 it('should generate navigation step when given source', function() {

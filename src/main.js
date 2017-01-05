@@ -44,6 +44,7 @@ export function init(Game: GameI, Memory: FooMemory): void {
     Monitoring.init(Game, Memory);
     Kernel.init(Game, Memory);
     Tasks.init(Game, Memory);
+    Planner.init(Game, Memory);
 }
 
 export function finish(Memory: FooMemory): void {

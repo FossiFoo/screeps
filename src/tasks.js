@@ -69,11 +69,11 @@ export function findNavigationTargetById(id: ObjectId): ?Position {
     return sourcePosition;
 }
 
-export function findClosestNavigationTargetByType(targetType: ScreepsConstantFind, pos: RoomPosition) {
+export function findClosestNavigationTargetByType(targetType: ScreepsConstantFind, pos: RoomPosition): ?Position {
     const obj : ?RoomObject = pos.findClosestByRange(targetType);
     if (!obj) {
         error("[tasks] can not find a source in " + pos.roomName);
-        return {x:0, y:0};
+        return {x:25, y:25};
     } else {
         const sourcePosition : RoomPosition = obj.pos;
         debug("[tasks] found a source at " + sourcePosition.toString());
@@ -125,10 +125,10 @@ export function findNearestSourceTarget(currentPosition: RoomPosition, source: S
     }
 
     if (currentPosition.roomName === source.room) {
-        //not in correct room yet
         return findClosestNavigationTargetByType(FIND_SOURCES_ACTIVE, currentPosition);
     } else {
-        return {x:0, y:0};
+        //not in correct room yet
+        return {x:25, y:25};
     }
 }
 

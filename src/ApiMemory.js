@@ -48,7 +48,8 @@ export function initializeMemory(mem: any | FooMemory): FooMemory {
             virtual: {
                 tasks: {}
             }
-        }
+        },
+        planner: {}
     };
 
     const assigned: FooMemory = _.assign(mem, initMem);

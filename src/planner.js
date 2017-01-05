@@ -4,9 +4,10 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { CreepBody, FooMemory, Task, TaskId,
-              TaskHolder, TaskState, TaskPrio,
-              SourceTarget, EnergyTarget, EnergyTargetSpawn, EnergyTargetController, EnergyTargetConstruction } from "../types/FooTypes.js";
+import type { FooMemory, PlannerMemory,
+              Task, TaskId, TaskHolder, TaskState, TaskPrio,
+              SourceTarget, EnergyTarget,
+              EnergyTargetSpawn, EnergyTargetController, EnergyTargetConstruction } from "../types/FooTypes.js";
 
 import { error, warn, info, debug } from "./monitoring";
 
@@ -19,6 +20,14 @@ import * as Tasks from "./tasks";
 import * as _unused from "./kernel";
 type KernelType = typeof _unused;
 import * as Rooms from "./rooms";
+
+export let Memory: PlannerMemory;
+export let Game: GameI;
+
+export function init(game: GameI, mem: FooMemory): void {
+    Memory = mem.planner;
+    Game = game;
+};
 
 export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     const creeps: CreepMap = Game.creeps; // FIXME make this room specific

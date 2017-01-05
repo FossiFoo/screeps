@@ -46,19 +46,20 @@ Todo
 https://en.wikipedia.org/wiki/Multilevel_feedback_queue
 a combination of fixed-priority preemptive scheduling, round-robin, and first in, first out algorithms. In this system, threads can dynamically increase or decrease in priority depending on if it has been serviced already, or if it has been waiting extensively. Every priority level is represented by its own queue, with round-robin scheduling among the high-priority threads and FIFO among the lower-priority ones. In this sense, response time is short for most threads, and short but critical system threads get completed very quickly.
 
-- basic upkeep for controller
-- mine
-
 - use other sources
-- pick up
 - planner: assign sources according to plan
+- pick up (hauler?)
 
+- reassign new task according to old job
 - check distance for working
+
+- mine
 
 - statistics about tasks
 
 - try/catch wrap main tasks and creep actions
 function wrap(fn) {try {fn()} catch(e) {/*handle*/}}
+
 
 Build order
 ===========
