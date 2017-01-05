@@ -70,7 +70,7 @@ export function findNavigationTargetById(id: ObjectId): ?Position {
 }
 
 export function findClosestNavigationTargetByType(targetType: ScreepsConstantFind, pos: RoomPosition): ?Position {
-    const obj : ?RoomObject = pos.findClosestByRange(targetType);
+    const obj : ?RoomObject = pos.findClosestByPath(targetType);
     if (!obj) {
         error("[tasks] can not find a source in " + pos.roomName);
         return {x:25, y:25};
@@ -132,12 +132,13 @@ export function findNearestSourceTarget(currentPosition: RoomPosition, source: S
     }
 }
 
-export function getSourceIdForTarget(source: SourceTarget, currentPosition: RoomPosition): SourceId {
+export function getSourceIdForTarget(source: SourceTarget, currentPosition: RoomPosition): ?SourceId {
     if (source.type === SourceTargets.FIXED) {
         return source.id;
     }
-    const sourceObject: Source = currentPosition.findClosestByRange(FIND_SOURCES_ACTIVE);
-    return sourceObject.id;
+    const sources: Source[] = currentPosition.findInRange(FIND_SOURCES, 1);
+    const sourceObject : ?Source = _.head(sources);
+    return sourceObject && sourceObject.id;
 }
 
 export function aquireEnergy(source: SourceTarget, currentPosition: RoomPosition, init: boolean): TaskStep {
@@ -150,7 +151,10 @@ export function aquireEnergy(source: SourceTarget, currentPosition: RoomPosition
     if (!adjacent) {
         return constructMoveStep(sourcePosition, source.room, {init, final: false});
     }
-    const sourceId : SourceId = getSourceIdForTarget(source, currentPosition);
+    const sourceId : ?SourceId = getSourceIdForTarget(source, currentPosition);
+    if (!sourceId) {
+        return constructStep("NOOP", {}, {final: true, init});
+    }
     return constructHarvestSourceStep(sourceId, {init, final: false});
 }
 

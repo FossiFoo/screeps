@@ -111,7 +111,7 @@ it('should return middle if target not found', function() {
 it('should find closest target by type', function() {
 
     const positionMock : RoomPosition = (new RoomPositionMock(0,0,""): any);
-    positionMock.findClosestByRange.mockReturnValueOnce({pos: {x:1,y:2}});
+    positionMock.findClosestByPath.mockReturnValueOnce({pos: {x:1,y:2}});
 
     const pos = dut.findClosestNavigationTargetByType(FIND_SOURCES_ACTIVE, positionMock);
 
@@ -155,7 +155,7 @@ it('should generate navigation step when given source', function() {
 it('should generate navigation step when ANY source', function() {
     const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.findClosestByRange.mockReturnValueOnce({pos: {x:10,y:20}});
+    positionMock.findClosestByPath.mockReturnValueOnce({pos: {x:10,y:20}});
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
     positionMock.y = 2;
@@ -194,7 +194,8 @@ it('should generate harvest step when adjecent to source', function() {
 it('should generate harvest step when close to ANY source', function() {
     const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.findClosestByRange.mockReturnValue({pos: {x:1,y:2}, id: "SourceId"});
+    positionMock.findClosestByPath.mockReturnValue({pos: {x:1,y:2}, id: "SourceId"});
+    positionMock.findInRange.mockReturnValue([{id: "SourceId"}]);
     positionMock.isNearTo.mockReturnValueOnce(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
