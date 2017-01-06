@@ -154,9 +154,11 @@ it('should return if no task for spawning can be found', function() {
 
 it('should return if body can be constructed (yet)', function() {
     ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue("test-1234");
+    ((Kernel.getTaskById: any): JestMockFn).mockReturnValue(Tasks.valid);
 
     const spawn : Spawn = Game.spawns["Spawn2"];
     spawn.spawning = undefined;
+    spawn.room.energyAvailable = 100;
     const name : ?CreepName = dut.spawnCreepForTask(Kernel, spawn, Game);
 
     expect(name).not.toBeDefined();
