@@ -155,13 +155,15 @@ export function upgradeController(Kernel: KernelType, room: Room): void {
         return;
     }
 
+    const controller : Controller = room.controller;
     const source : SourceTarget = getSource(room);
-    const controller : EnergyTargetController = {
+    const target : EnergyTargetController = {
         type: EnergyTargetTypes.CONTROLLER,
         room: room.name,
-        targetId: room.controller.id
+        targetId: controller.id
     }
-    const upgradeController: Task = Tasks.constructUpgrade(Game.time, TaskPriorities.IDLE, source, controller);
+    const prio : TaskPrio = controller.ticksToDowngrade < 1000 ? TaskPriorities.URGENT : TaskPriorities.IDLE;
+    const upgradeController: Task = Tasks.constructUpgrade(Game.time, prio, source, target);
 
     Kernel.addTask(upgradeController);
 }
