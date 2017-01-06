@@ -29,6 +29,21 @@ export function init(game: GameI, mem: FooMemory): void {
     Game = game;
 };
 
+export function getSource(room: Room) {
+    return {
+        type: SourceTargets.ANY,
+        room: room.name
+    };
+}
+export function  constructTargetSpawn(roomName: RoomName, spawn: Spawn): EnergyTargetSpawn {
+    return {
+        room: roomName,
+        type: EnergyTargetTypes.SPAWN,
+        name: spawn.name,
+        targetId: spawn.id
+    };
+}
+
 export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
     const creeps: CreepMap = Game.creeps; // FIXME make this room specific
     // min workers for a starting room
@@ -42,7 +57,7 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
         const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
             const state : TaskState = holder.meta.state;
             return holder.task.type === TaskTypes.PROVISION &&
-                   (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
+                   (state === TaskStates.WAITING || state === TaskStates.RUNNING);
         });
 
         const extensions : Extension[] = Rooms.getExtensions(room);
@@ -63,19 +78,14 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
         });
         const spawn : ?Spawn = emptySpawns[0];
 
+        let prio : TaskPrio = TaskPriorities.UPKEEP;
         let target : ?EnergyTarget;
         if (spawn) {
-            const spawnTarget : EnergyTargetSpawn = {
-                room: room.name,
-                type: EnergyTargetTypes.SPAWN,
-                name: spawn.name,
-                targetId: spawn.id
-            }
-            target = spawnTarget;
+            target = constructTargetSpawn(room.name, spawn);
         } else {
             const extensionsSorted : Extension[] = extensions.sort((e: Extension) => e.energy);
             const extension : ?Extension = _.head(extensionsSorted);
-            if (extension) {
+            if (extension && extension.energy < extension.energyCapacity) {
                 const extensionTarget : EnergyTargetSpawn = {
                     room: room.name,
                     type: EnergyTargetTypes.SPAWN,
@@ -83,6 +93,13 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
                     targetId: extension.id
                 }
                 target = extensionTarget;
+            }
+        }
+        if (!target) {
+            const anySpawn : Spawn = spawns[0];
+            if (anySpawn && anySpawn.energy < anySpawn.energyCapacity) {
+                target = constructTargetSpawn(room.name, anySpawn);
+                prio = TaskPriorities.UPGRADE;
             }
         }
         if (!target) {
@@ -96,7 +113,14 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
             type: SourceTargets.ANY,
             room: room.name
         }
-        const prio : TaskPrio = openTaskCount === 0 ? TaskPriorities.URGENT : TaskPriorities.UPKEEP;
+
+        const runningTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+            const state : TaskState = holder.meta.state;
+            return holder.task.type === TaskTypes.PROVISION &&
+                   state === TaskStates.RUNNING;
+        });
+
+        prio = runningTaskCount === 0 ? TaskPriorities.URGENT : prio;
         const harvest: Task = Tasks.constructProvisioning(Game.time, prio, source, target);
 
         Kernel.addTask(harvest);
@@ -131,10 +155,7 @@ export function upgradeController(Kernel: KernelType, room: Room): void {
         return;
     }
 
-    const source : SourceTarget = {
-        type: SourceTargets.ANY,
-        room: room.name
-    }
+    const source : SourceTarget = getSource(room);
     const controller : EnergyTargetController = {
         type: EnergyTargetTypes.CONTROLLER,
         room: room.name,

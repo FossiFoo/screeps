@@ -51,7 +51,26 @@ it('should create provision task for extension in bootup', function() {
     });
     // Testdata spawn is full
     ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([Game.spawns["Spawn1"]]);
-    ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([{id: "test-extension-1"}]);
+    const mockExtension = {id: "test-extension-1", energy: 50, energyCapacity: 100};
+    ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([mockExtension]);
+
+    const room : Room = Game.rooms["N0W0"];
+    dut.bootup(Kernel, room, Game);
+
+    expect(Tasks.constructProvisioning).toBeCalled();
+    expect(Kernel.addTask).toBeCalled();
+});
+
+it('should create provision task for spawn in bootup if ex ful, but spawn isnt', function() {
+    const holder = Testdata.Tasks.validHolder;
+    ((Kernel.getLocalCount: any): JestMockFn).mockImplementation((name, fn) => {
+        fn(holder); return 0;
+    });
+    const spawn : Spawn = _.cloneDeep(Game.spawns["Spawn1"]);
+    spawn.energy = 200;
+    ((Rooms.getSpawns: any): JestMockFn).mockReturnValue([spawn]);
+    const mockExtension = {id: "test-extension-1", energy: 100, energyCapacity: 100};
+    ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([mockExtension]);
 
     const room : Room = Game.rooms["N0W0"];
     dut.bootup(Kernel, room, Game);

@@ -46,6 +46,10 @@ Todo
 https://en.wikipedia.org/wiki/Multilevel_feedback_queue
 a combination of fixed-priority preemptive scheduling, round-robin, and first in, first out algorithms. In this system, threads can dynamically increase or decrease in priority depending on if it has been serviced already, or if it has been waiting extensively. Every priority level is represented by its own queue, with round-robin scheduling among the high-priority threads and FIFO among the lower-priority ones. In this sense, response time is short for most threads, and short but critical system threads get completed very quickly.
 
+- fill spawn non-urgent
+- urgent controller upgrade
+- transfer energy to other target if close
+
 - use other sources
 - planner: assign sources according to plan
 - pick up (hauler?)
@@ -53,9 +57,10 @@ a combination of fixed-priority preemptive scheduling, round-robin, and first in
 - reassign new task according to old job
 - check distance for working
 
-- mine
-
 - statistics about tasks
+- clean up tasks if nothing gets finished
+
+- mine
 
 - try/catch wrap main tasks and creep actions
 function wrap(fn) {try {fn()} catch(e) {/*handle*/}}
@@ -81,9 +86,10 @@ Build order
  => upgrade controller to lvl 3
 - Container Source 1
 - Container Source 2
-- Turret
+- Tower
  => extension
  => extension
+ => upgrade controller to lvl 4
 - Storage
 - Roads
  => Repair
@@ -93,6 +99,8 @@ Build order
 
 ------------------
 -> claim another room (level 6?)
+-> rampart spawn & storage
+-> serious defence
 -> minerals, market and stuff
 -> SKs
 
@@ -143,3 +151,18 @@ Hauler
 // - claim
 // - defence
 // - offence
+
+Times
+=====
+
+1. EX: 1419
+2. EX: 2100
+3. EX: 2900
+4. EX:
+5. EX:
+
+Ideas
+=====
+
+- Scout clockwise algorythm
+- Early scout exits
