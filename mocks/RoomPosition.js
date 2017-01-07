@@ -8,7 +8,7 @@ export default class RoomPosition  {
     roomName: string;
     x: number;
     y: number;
-    createConstructionSite(structureType: string) {return 0;};
+    createConstructionSite(structureType: string) {return 0;}
     createFlag(name?: string, color?: number, secondaryColor?: number) {return 0;};
     findClosestByPath<T>( type: number, opts?: FindPathOpts & { filter?: any | string, algorithm?: string } ) {return;}
     findClosestByPath<T>( objects: T[] | RoomPosition[], opts?: FindPathOpts & { filter?: any | string, algorithm?: string } ) {return;}

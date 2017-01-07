@@ -49,7 +49,11 @@ export function initializeMemory(mem: any | FooMemory): FooMemory {
                 tasks: {}
             }
         },
-        planner: {}
+        planner: {
+            energyDistribution: {
+                rooms: {}
+            }
+        }
     };
 
     const assigned: FooMemory = _.assign(mem, initMem);

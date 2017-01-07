@@ -161,7 +161,7 @@ export function assign(id: TaskId, creep: Creep): void {
         return;
     }
 
-    warn(`[Kernel] assigned ${id} to ${creep.name}`);
+    info(`[Kernel] assigned ${id} to ${creep.name}`);
     holder.meta.assigned = creep.name;
     updateTaskState(holder, TaskStates.ASSIGNED);
     Creeps.assign(creep, id, holder.task);

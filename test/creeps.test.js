@@ -104,6 +104,12 @@ it('should get the creeps state if task is assigned', function() {
     expect(state).toBe(CreepStates.IDLE);
 });
 
+it('should return body parts by type', function() {
+    const creep : Creep = Game.creeps["Leo"];
+    const partsByType = dut.getBodyParts(creep);
+    expect(partsByType[MOVE]).toEqual([{"hits": 100, "type": "move"}, {"hits": 100, "type": "move"}]);
+});
+
 it('should call task processing according to type', function() {
     const creep : Creep = Game.creeps["Leo"];
 

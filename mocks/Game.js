@@ -6,6 +6,7 @@ import Market from "./Market.js";
 import GameMap from "./GameMap.js";
 import Creep from "./Creep.js";
 import Controller from "./Controller.js";
+import RoomPosition from "./RoomPosition.js";
 
 class TestController extends Controller {
 }
@@ -31,6 +32,18 @@ const Room2 : Room = new TestRoom("N1W0");
 
 let counter = {counter: 0};
 
+class TestRoomPosition extends RoomPosition {
+    constructor(x: number, y: number, roomName: string) {
+        super(x, y, roomName);
+        this.x = x;
+        this.y = y;
+        this.roomName = roomName;
+    };
+    roomName: string;
+    x: number;
+    y: number;
+}
+
 class TestSpawn extends Spawn {
     constructor(name, room, counter) {
         super();
@@ -40,6 +53,7 @@ class TestSpawn extends Spawn {
         this.energy = 300;
         this.energyCapacity = 300;
         this.spawning = null;
+        this.pos = new TestRoomPosition(12,23,room.name);
         // mock
         this.counter = counter;
     }
@@ -88,6 +102,13 @@ class TestCreep extends Creep {
         this.carry = {
             RESOURCE_ENERGY: 0
         }
+        this.body = [
+            {type: "work", hits: 0},
+            {type: "carry", hits: 50},
+            {type: "carry", hits: 100},
+            {type: "move", hits: 100},
+            {type: "move", hits: 100},
+        ]
     }
 }
 

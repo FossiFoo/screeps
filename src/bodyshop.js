@@ -5,8 +5,9 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 // types
-import type { CreepBody, FooMemory, Task, TaskId,
-              TaskState, TaskPrio, TaskType } from "../types/FooTypes.js";
+import type { CreepBody, CreepBodyDefinitionByType,
+              FooMemory,
+              Task, TaskId, TaskState, TaskPrio, TaskType } from "../types/FooTypes.js";
 
 import { error, warn, info, debug } from "./monitoring";
 
@@ -15,6 +16,7 @@ import { TaskTypes, TaskPriorities, SourceTargets, CreepStates, EnergyTargetType
 // Game
 import * as _unused from "./kernel";
 type KernelType = typeof _unused;
+import * as Creeps from "./creeps";
 
 
 export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
@@ -33,7 +35,24 @@ export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
     return returnValue;
 }
 
-export function designAffordableWorker(maxEnergy: number): ?CreepBody {
+export function isCreepBroken(creep: Creep): boolean {
+    const body : CreepBodyDefinitionByType = Creeps.getBodyParts(creep);
+    const broken : boolean = _.every(body[WORK], (b: BodyPartDefinition) => b.hits === 0);
+    return broken;
+}
+
+export function calculateMaximumCarry(taskType: TaskType, maxExpenditure: EnergyUnit): ?number {
+    const maxBody : ?CreepBody = designCreepForEnergy(taskType, maxExpenditure);
+    if (!maxBody) {
+        return null;
+    }
+    const carryParts : number = _.reduce(maxBody, (total: number, part: BODYPART_TYPE): number => {
+        return part === CARRY ? total + 1 : total;
+    }, 0);
+    return carryParts * CARRY_CAPACITY;
+}
+
+export function designAffordableWorker(maxEnergy: EnergyUnit): ?CreepBody {
     const maxCarry : number = maxEnergy - BODYPART_COST["work"];
     const partsCarry : number = Math.floor(maxCarry / (BODYPART_COST["carry"] + BODYPART_COST["move"]));
     if (partsCarry < 1) {
@@ -48,8 +67,7 @@ export function designAffordableWorker(maxEnergy: number): ?CreepBody {
     return body;
 }
 
-export function designCreepForEnergy(task: Task, maxEnergy: number): ?CreepBody {
-    const taskType: TaskType = task.type;
+export function designCreepForEnergy(taskType: TaskType, maxEnergy: EnergyUnit): ?CreepBody {
     switch (taskType) {
         case TaskTypes.UPGRADE:
         case TaskTypes.BUILD:
@@ -62,13 +80,15 @@ export function designCreepForEnergy(task: Task, maxEnergy: number): ?CreepBody 
 }
 
 export function designAffordableCreep(task: Task, room: Room): ?CreepBody {
-    const maxEnergy : number = room.energyAvailable;
-    return designCreepForEnergy(task, maxEnergy);
+    const maxEnergy : EnergyUnit = room.energyAvailable;
+    const taskType: TaskType = task.type;
+    return designCreepForEnergy(taskType, maxEnergy);
 }
 
 export function designOptimalCreep(task: Task, room: Room): ?CreepBody {
-    const maxEnergy : number = room.energyCapacityAvailable;
-    return designCreepForEnergy(task, maxEnergy);
+    const maxEnergy : EnergyUnit = room.energyCapacityAvailable;
+    const taskType: TaskType = task.type;
+    return designCreepForEnergy(taskType, maxEnergy);
 }
 
 export function spawnCreepForTask(Kernel: KernelType, spawn: Spawn, Game: GameI): ?CreepName {

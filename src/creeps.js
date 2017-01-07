@@ -7,6 +7,7 @@ import type { Task, TaskId, TaskState, TaskPrio,
               TaskStepTransfer,
               TaskStepUpgrade,
               TaskStepBuild,
+              CreepBodyDefinitionByType,
               CreepMemory, CreepState } from "../types/FooTypes.js";
 
 import { CREEP_MEMORY_VERSION } from "./consts";
@@ -35,7 +36,7 @@ export function memory(creep: Creep): CreepMemory {
 
 export function assign(creep: Creep, taskId: TaskId, task: Task): void {
     var mem : CreepMemory = memory(creep);
-    warn(`[creep] [${creep.name}] assigned: ${taskId}`);
+    info(`[creep] [${creep.name}] assigned: ${taskId}`);
     mem.task.assignedId = taskId;
 }
 
@@ -55,6 +56,12 @@ export function getAssignedTask(creep: Creep): ?TaskId {
 
 export function getState(creep: Creep): CreepState {
     return getAssignedTask(creep) ? CreepStates.BUSY : CreepStates.IDLE;
+}
+
+export function getBodyParts(creep: Creep): CreepBodyDefinitionByType {
+    const body : BodyPartDefinition[] = creep.body;
+    const partByType = _.groupBy(creep.body, (b: BodyPartDefinition) => b.type);
+    return partByType;
 }
 
 export function noop(creep: Creep): TaskStepResult {

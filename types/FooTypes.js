@@ -86,7 +86,7 @@ export type KernelMemory = {
 };
 
 export type PlannerMemory = {
-
+    energyDistribution: PlanningEnergyDistribution
 };
 
 export type OwnMemory = {
@@ -144,6 +144,7 @@ export type EnergyTargetConstruction = {
 export type EnergyTargetBase = {
     room: RoomName;
     targetId: ObjectId;
+    energyNeed: EnergyUnit;
 };
 
 export type EnergyTarget =  EnergyTargetSpawn | EnergyTargetController | EnergyTargetConstruction;
@@ -203,6 +204,8 @@ export type CreepMemory = {
 
 export type CreepBody = BODYPART_TYPE[];
 
+export type CreepBodyDefinitionByType = {[type: BODYPART_TYPE]: BodyPartDefinition[]};
+
 export type CreepState = $Keys<typeof CreepStates>;
 
 export type TaskStepResult = {
@@ -249,5 +252,43 @@ export type TaskStep = {
     init: boolean,
     final: boolean
 };
+
+export type PathLength = number;
+
+export type PathData = {
+    length: PathLength
+};
+
+export type PathMap = {[name: ObjectId]: PathData};
+
+export type PlanningSourceData = {
+    id: SourceId,
+    capacity: EnergyUnit
+}
+
+export type PlanningRoomData = {
+    name: RoomName,
+    energyPotential: EnergyUnit,
+    sources: {[name: SourceId]: PlanningSourceData},
+    paths: {
+        base: PathMap
+    }
+};
+
+export type PlanningSourceDistribution = {
+    id: SourceId,
+    totalCapacity: EnergyUnit,
+    totalUse: EnergyUnit
+};
+
+export type PlanningRoomDistribution = {
+    id: RoomName,
+    sources: {[sourceId: SourceId]: PlanningSourceDistribution},
+    any: EnergyUnit
+};
+
+export type PlanningEnergyDistribution = {
+    rooms: {[name: RoomName]: PlanningRoomDistribution}
+}
 
 export type Predicate<T> = (t: T) => boolean;

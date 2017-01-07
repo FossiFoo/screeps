@@ -176,7 +176,7 @@ export function energyTransmission(
     }
 
     //FIXME check if close to source
-    if (carryAmount > carryCapacity * 0.99) {
+    if (carryAmount > taskTarget.energyNeed || carryAmount > carryCapacity * 0.99) {
         memory.state = "TRANSMIT";
     }
 

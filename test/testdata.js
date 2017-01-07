@@ -4,6 +4,8 @@ import type { Task, TaskMeta, TaskHolder,
               TaskStepNavigate,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
               KernelMemory, PlannerMemory,
+              PlanningRoomData,
+              CreepBodyDefinitionByType,
               ProvisionTask, SourceTarget, EnergyTargetSpawn, EnergyTarget,
               UpgradeTask, EnergyTargetController,
               TaskBuild, EnergyTargetConstruction } from "../types/FooTypes.js";
@@ -17,19 +19,22 @@ const validTarget : EnergyTargetSpawn = {
     room: validRoomName,
     type: EnergyTargetTypes.SPAWN,
     name: "Spawn1",
-    targetId: "test-spawn1-id"
+    targetId: "test-spawn1-id",
+    energyNeed: 300
 }
 
 const validController : EnergyTargetController = {
     room: validRoomName,
     type: EnergyTargetTypes.CONTROLLER,
-    targetId: "test-controller-id"
+    targetId: "test-controller-id",
+    energyNeed: 100
 }
 
 const validConstruction : EnergyTargetConstruction = {
     room: validRoomName,
     type: EnergyTargetTypes.CONSTRUCTION,
-    targetId: "test-construction-id"
+    targetId: "test-construction-id",
+    energyNeed: 300
 }
 
 export const Targets = {
@@ -137,6 +142,42 @@ export const Tasks = {
     validStep: validStep,
 }
 
+const validRoomData : PlanningRoomData = {
+    name: "N0W0",
+    energyPotential: 9001,
+    sources: {"Source1": {id: "Source1", capacity: 700},
+              "Source2": {id: "Source2", capacity: 9000},
+              "Source3": {id: "Source3", capacity: 1}},
+    paths: {
+        base: {}
+    }
+};
+
+export const Planner = {
+    validRoomData
+};
+
+const work = ("work": WORK_TYPE);
+const carry = ("carry": CARRY_TYPE);
+const move = ("move": MOVE_TYPE);
+
+const validBodyDefinition : CreepBodyDefinitionByType = {
+    work: [{type: WORK, hits: 50}],
+    carry: [{type: CARRY, hits: 100}, {type: CARRY, hits: 100}],
+    move: [{type: MOVE, hits: 100}, {type: MOVE, hits: 100}],
+};
+
+const brokenBodyDefinition : CreepBodyDefinitionByType = {
+    work: [{type: WORK, hits: 0}],
+    carry: [{type: CARRY, hits: 50}, {type: CARRY, hits: 100}],
+    move: [{type: MOVE, hits: 100}, {type: MOVE, hits: 100}],
+};
+
+export const BodyShop = {
+    validBodyDefinition,
+    brokenBodyDefinition
+};
+
 const validGCLStats: GCLStats = {
     level: 0,
     progress: 0,
@@ -174,6 +215,9 @@ const validKernel: KernelMemory = {
 }
 
 const validPlanner: PlannerMemory = {
+    energyDistribution: {
+        rooms: {}
+    }
 }
 
 const validMemory: OwnMemory = {

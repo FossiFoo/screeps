@@ -21,6 +21,8 @@ import * as dut from "../src/tasks.js";
 // Mocks
 import * as Stats from "../src/stats.js";
 import * as Monitoring from "../src/monitoring.js";
+
+jest.mock("../mocks/RoomPosition.js");
 import RoomPositionMock from "../mocks/RoomPosition.js";
 
 // test data

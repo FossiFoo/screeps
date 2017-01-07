@@ -53,6 +53,6 @@
     "testPathIgnorePatterns": [
       "<rootDir>/.*/flycheck_.*"
     ],
-    "verbose": true
+    "verbose": false
   }
 }

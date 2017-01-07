@@ -80,6 +80,18 @@ it('should not touch creep if busy', function() {
     expect(Kernel.assign).not.toBeCalled();
 });
 
+it('should move creep if broken', function() {
+    const creep : Creep = Game.creeps["Flix"];
+    ((Creeps.getState: any): JestMockFn).mockReturnValue(CreepStates.IDLE);
+    ((BodyShop.isCreepBroken: any): JestMockFn).mockReturnValue(true);
+
+    dut.assignLocalTasks(Kernel, creep, Game);
+
+    expect(creep.moveTo).toBeCalled();
+    expect(Kernel.getLocalWaiting).not.toBeCalled();
+    expect(Kernel.assign).not.toBeCalled();
+});
+
 it('should spawn a creep for a local waiting task', function() {
     ((BodyShop.spawnCreepForTask: any): JestMockFn).mockReturnValue("Peter");
 

@@ -59,6 +59,13 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
         return;
     }
 
+    const broken : boolean = BodyShop.isCreepBroken(creep);
+    if (broken) {
+        warn(`[main] ${creep.name} is broken`);
+        creep.moveTo(0,0);
+        return;
+    }
+
     debug(`[main] [${creep.name}] assigning local tasks`);
 
     const room : Room = creep.room; // FIXME make this assigned room?
@@ -169,6 +176,13 @@ export function loopInternal(Game: GameI, FooMemory: FooMemory): void {
 }
 
 export function loop(): void {
+    if (Memory.killMeYesReally) {
+        for (let prop in Memory) {
+            delete Memory[prop];
+        }
+        return;
+    }
+
     const MemoryInternal: FooMemory = (ApiMemory.initializeMemory(Memory));
     loopInternal(Game, MemoryInternal);
 }

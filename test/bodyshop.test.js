@@ -12,7 +12,7 @@ import Game from "../src/ApiGame.js";
 jest.unmock("../src/ApiMemory.js");
 import Memory from "../src/ApiMemory.js";
 jest.unmock("../src/consts.js")
-import { CreepStates, TaskPriorities } from "../src/consts.js";
+import { CreepStates, TaskPriorities, TaskTypes } from "../src/consts.js";
 
 // DUT
 jest.unmock("../src/bodyshop.js");
@@ -21,8 +21,11 @@ import * as dut from "../src/bodyshop.js";
 // Mocks
 import * as Monitoring from "../src/monitoring.js";
 import * as Kernel from "../src/kernel.js";
+import * as Creeps from "../src/creeps.js";
 
-import { Tasks } from "../test/testdata.js";
+// test data
+jest.unmock("../test/testdata.js")
+import { Tasks, BodyShop } from "../test/testdata.js";
 
 it('should error on create', function() {
     const spawn : Spawn = Game.spawns['Spawn1'];
@@ -53,6 +56,20 @@ it('should return creep name on create', function() {
     expect(val).toBe("foobar");
 });
 
+
+it('should return true when creep is broken', function() {
+    ((Creeps.getBodyParts: any): JestMockFn).mockReturnValue(BodyShop.brokenBodyDefinition);
+
+    const broken = dut.isCreepBroken(Game.creeps["Leo"]);
+    expect(broken).toBeTruthy();
+});
+
+it('should return false when creep is fine', function() {
+    ((Creeps.getBodyParts: any): JestMockFn).mockReturnValue(BodyShop.validBodyDefinition);
+
+    const broken = dut.isCreepBroken(Game.creeps["Leo"]);
+    expect(broken).toBeFalsy();
+});
 
 function checkWorkerBody(energy: number, body: ?CreepBody): void {
     const design : ?CreepBody = dut.designAffordableWorker(energy);
@@ -100,6 +117,13 @@ it('should design an optimal creep according to task', function() {
         expect(design.length).toBe(11);
     }
 });
+
+
+it('should calculate maximum creep carry capacity for task and expenditure', function() {
+    const carry : ?number = dut.calculateMaximumCarry(TaskTypes.UPGRADE, 400);
+    expect(carry).toBe(150);
+});
+
 
 it('should spawn a creep for a local waiting task', function() {
     ((Kernel.getLocalWaiting: any): JestMockFn).mockReturnValue("test-1234");

@@ -174,11 +174,12 @@ export function recordStats(Game: GameI, Memory: FooMemory): void {
 
     Memory.stats = generateStats(time, Game.rooms, Game.spawns, Game.gcl, Game.cpu, lastTick, doReport ? time : lastReport);
 
+    const used : string = Game.cpu.getUsed().toFixed(3);
     const noCreeps : number = _.size(Game.creeps);
     const noCreepsMem : number = _.size(Memory.creeps);
-    info("==========================");
+    info(`= ${time} ==============`);
     info(`Tasks: ${taskStats.noTasks}: ${taskStats.noTasksWaiting}/${taskStats.noTasksAssigned}/${taskStats.noTasksRunning}/${taskStats.noTasksBlocked}/${taskStats.noTasksFinished}/${taskStats.noTasksAborted}`);
     info(`Types: ${taskStats.types}`);
-    info(`Creeps: ${noCreeps} Mem: ${noCreepsMem} CPU: ${Game.cpu.bucket}`);
+    info(`Creeps: ${noCreeps} Mem: ${noCreepsMem} CPU: ${used}/${Game.cpu.tickLimit}/${Game.cpu.bucket}`);
     info("==========================");
 }

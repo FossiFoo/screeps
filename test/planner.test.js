@@ -4,13 +4,15 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
+import type { PlanningRoomData, PlanningSourceData, PlanningRoomDistribution, PlanningSourceDistribution, SourceTarget } from "../types/FooTypes.js";
+
 // API
 jest.unmock("../src/ApiGame.js");
 import Game from "../src/ApiGame.js";
 jest.unmock("../src/ApiMemory.js");
 import Memory from "../src/ApiMemory.js";
 jest.unmock("../src/consts.js")
-import { CreepStates } from "../src/consts.js";
+import { CreepStates, SourceTargets, TaskPriorities, TaskTypes } from "../src/consts.js";
 
 // DUT
 jest.unmock("../src/planner.js");
@@ -94,7 +96,7 @@ it('should upgrade the controller', function() {
     const room : Room = Game.rooms["N0W0"];
 
     dut.init(Game, Memory);
-    dut.upgradeController(Kernel, room);
+    dut.upgradeController(Kernel, room, Testdata.Planner.validRoomData, {rooms: {}});
 
     expect(Kernel.getLocalCountForState).toBeCalled();
     expect(Tasks.constructUpgrade).toBeCalled();
@@ -104,7 +106,7 @@ it('should upgrade the controller', function() {
 it('should not upgrade the controller if too many tasks', function() {
     ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(3);
     const room : Room = Game.rooms["N0W0"];
-    dut.upgradeController(Kernel, room);
+    dut.upgradeController(Kernel, room, Testdata.Planner.validRoomData, {rooms: {}});
 
     expect(Kernel.getLocalCountForState).toBeCalled();
     expect(Tasks.constructUpgrade).not.toBeCalled();
@@ -118,8 +120,11 @@ it('should build extension', function() {
 
     const room : Room = Game.rooms["N0W0"];
 
+    const data : PlanningRoomData = Testdata.Planner.validRoomData;
+    const distribution : any = {rooms: {}};
+
     dut.init(Game, Memory);
-    dut.buildExtension(Kernel, room);
+    dut.buildExtension(Kernel, room, data, distribution);
 
     expect(Rooms.getConstructionSites).toBeCalled();
     expect(Tasks.constructBuild).toBeCalled();
@@ -130,7 +135,10 @@ it('should return if no extension to build', function() {
     ((Rooms.getConstructionSites: any): JestMockFn).mockReturnValue([]);
     const room : Room = Game.rooms["N0W0"];
 
-    dut.buildExtension(Kernel, room);
+    const data : PlanningRoomData = Testdata.Planner.validRoomData;
+    const distribution : any = {rooms: {}};
+
+    dut.buildExtension(Kernel, room, data, distribution);
 
     expect(Rooms.getConstructionSites).toBeCalled();
     expect(Tasks.constructBuild).not.toBeCalled();
@@ -143,9 +151,60 @@ it('should not build extension if too busy with building', function() {
 
     const room : Room = Game.rooms["N0W0"];
 
-    dut.buildExtension(Kernel, room);
+    const data : PlanningRoomData = Testdata.Planner.validRoomData;
+    const distribution : any = {rooms: {}};
+
+    dut.buildExtension(Kernel, room, data, distribution);
 
     expect(Rooms.getConstructionSites).toBeCalled();
     expect(Tasks.constructBuild).not.toBeCalled();
     expect(Kernel.addTask).not.toBeCalled();
+});
+
+it('should get planning data for a room', function() {
+    const mockSources : Source[] = ([{id:"Source1", energyCapacity: 9000}, {id:"Source2", energyCapacity: 1}]: any);
+    ((Rooms.getSources: any): JestMockFn).mockReturnValue(mockSources);
+    ((Rooms.getBase: any): JestMockFn).mockReturnValue({room: "N0W0", pos: {x: 10, y: 20}});
+    ((Rooms.calculatePathLength: any): JestMockFn).mockReturnValue(1);
+
+    const room : Room = Game.rooms["N0W0"];
+    const data : PlanningRoomData = dut.getRoomData(room);
+
+    expect(data).toMatchObject({name: "N0W0",
+                                energyPotential: 9001,
+                                paths: {base: {"Source1": 1, "Source2": 1}},
+                                sources: {"Source1": {id: "Source1", capacity: 9000},
+                                          "Source2": {id: "Source2", capacity: 1}}});
+});
+
+it('should convert sources data to distribution', function() {
+    const data : PlanningSourceData = Testdata.Planner.validRoomData.sources["Source1"];
+
+    const distribution : PlanningSourceDistribution = dut.convertSourceDataToDistribution(data);
+
+    expect(distribution).toMatchObject({id: "Source1", totalCapacity: 700, totalUse: 0});
+});
+
+it('should initialize distribution from room data', function() {
+    const data : PlanningRoomData = Testdata.Planner.validRoomData;
+
+    const distribution : PlanningRoomDistribution = dut.initializeDistributionFromData(data);
+
+    expect(distribution).toMatchObject({id: "N0W0", sources:
+                                                            {"Source1": {id: "Source1", totalCapacity: 700, totalUse: 0},
+                                                             "Source2": {id: "Source2", totalCapacity: 9000, totalUse: 0},
+                                                             "Source3": {id: "Source3", totalCapacity: 1, totalUse: 0}}});
+});
+
+it('should determine an underutilized source', function() {
+
+    const room : Room = Game.rooms["N0W0"];
+
+    const data : PlanningRoomData = Testdata.Planner.validRoomData;
+    const distribution : any = {rooms: {}};
+
+    dut.init(Game, Memory);
+    const target : SourceTarget = dut.determineSource(room, data, distribution, 666, TaskPriorities.UPKEEP, TaskTypes.UPGRADE);
+
+    expect(target).toMatchObject({type: SourceTargets.FIXED, id: "Source1", room: room.name, amount: 666});
 });

@@ -5,6 +5,8 @@ jest.unmock("../mocks/Memory.js");
 import {Memory} from "../mocks/Memory.js";
 jest.unmock("lodash");
 import  _ from "lodash";
+jest.unmock("../mocks/RoomPosition.js");
+import RoomPosition from "../mocks/RoomPosition.js";
 
 Object.assign(global, {
     OK: 0,
@@ -654,5 +656,6 @@ Object.assign(global, {
 }, {
     "Game": Game,
     "Memory": Memory,
-    "_": _
+    "_": _,
+    "RoomPosition": RoomPosition
 });

@@ -46,19 +46,22 @@ Todo
 https://en.wikipedia.org/wiki/Multilevel_feedback_queue
 a combination of fixed-priority preemptive scheduling, round-robin, and first in, first out algorithms. In this system, threads can dynamically increase or decrease in priority depending on if it has been serviced already, or if it has been waiting extensively. Every priority level is represented by its own queue, with round-robin scheduling among the high-priority threads and FIFO among the lower-priority ones. In this sense, response time is short for most threads, and short but critical system threads get completed very quickly.
 
+- planner: assign sources according to plan
+- directly compare needed energy for job
+
+- remember last action and outcome
 - transfer energy to other target if close
 
-- use other sources
-- planner: assign sources according to plan
+- check distance for working
+- repair broken creep: don't move
+
+- mine
 - pick up (hauler?)
 
 - reassign new task according to old job
-- check distance for working
-
 - statistics about tasks
 - clean up tasks if nothing gets finished
 
-- mine
 
 - try/catch wrap main tasks and creep actions
 function wrap(fn) {try {fn()} catch(e) {/*handle*/}}
@@ -150,17 +153,32 @@ Hauler
 // - defence
 // - offence
 
-Times
+PB Times
 =====
 
-1. EX: 1419
-2. EX: 2100
-3. EX: 2900
-4. EX:
-5. EX:
+RCL 2:  551
+1. EX: 1278             727
+2. EX: 2060             700
+3. EX: 2827             1000
+4. EX: 3665             650
+5. EX: 5024             1400
+
+tedivm: RCL3 in 16k
 
 Ideas
 =====
 
 - Scout clockwise algorythm
 - Early scout exits
+- try throwing out _.property declarations in lodash definition
+- flood fill for initial placement
+
+Layout
+======
+
+- Spawn and Storage distanz > 10
+- Tower in der Mitte
+- Storage nahe Source oder lieber Mitte?
+- Extension Checkerboard
+- Terminal?
+- Labs: woanders
