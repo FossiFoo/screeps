@@ -262,30 +262,20 @@ it('should return task memory if present', function() {
     expect(memory.present).toBe(true);
 });
 
-it('should error if processing creep has no task', function() {
-    ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(null);
-
-    const creep : Creep = Game.creeps["Flix"];
-
-    dut.processTask(creep);
-
-    expect(Monitoring.error).toBeCalled();
-});
-
 it('should error if processing creep has unknwon task', function() {
     ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue("test-unknown");
 
     const creep : Creep = Game.creeps["Flix"];
 
-    dut.processTask(creep);
+    const state : TaskState = dut.processTask(creep, "test-task-unknown");
 
     expect(Monitoring.error).toBeCalled();
+    expect(state).toBe(TaskStates.ABORTED);
 });
 
 it('should get next step for task', function() {
     const validHolder : TaskHolder = Testdata.Tasks.validHolder;
 
-    ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
     ((Tasks.getNextStep: any): JestMockFn).mockReturnValue(Testdata.Tasks.validStep);
     ((Creeps.processTaskStep: any): JestMockFn).mockReturnValue({success: true});
 
@@ -296,11 +286,12 @@ it('should get next step for task', function() {
     const creep : Creep = Game.creeps["Flix"];
 
     //when
-    dut.processTask(creep);
+    const state : TaskState = dut.processTask(creep, validHolder.id);
 
     expect(Tasks.getNextStep).toBeCalled();
     expect(Creeps.processTaskStep).toBeCalled();
     expect(validHolder.meta.state).toBe(TaskStates.RUNNING);
+    expect(state).toBe(TaskStates.RUNNING);
 });
 
 it('should set task to finished on final step', function() {
@@ -308,7 +299,6 @@ it('should set task to finished on final step', function() {
     const step : TaskStep = _.cloneDeep(Testdata.Tasks.validStep);
     step.final = true;
 
-    ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
     ((Tasks.getNextStep: any): JestMockFn).mockReturnValue(step);
     ((Creeps.processTaskStep: any): JestMockFn).mockReturnValue({success: true});
 
@@ -319,10 +309,10 @@ it('should set task to finished on final step', function() {
     const creep : Creep = Game.creeps["Flix"];
 
     //when
-    dut.processTask(creep);
+    const state : TaskState = dut.processTask(creep, validHolder.id);
 
     expect(validHolder.meta.state).toBe(TaskStates.FINISHED);
-    expect(Creeps.lift).toBeCalled();
+    expect(state).toBe(TaskStates.FINISHED);
 });
 
 
@@ -333,7 +323,6 @@ it('should set task to aborted if blocked for some ticks', function() {
     const step : TaskStep = _.cloneDeep(Testdata.Tasks.validStep);
     step.final = true;
 
-    ((Creeps.getAssignedTask: any): JestMockFn).mockReturnValue(validHolder.id);
     ((Tasks.getNextStep: any): JestMockFn).mockReturnValue(step);
     ((Creeps.processTaskStep: any): JestMockFn).mockReturnValue({success: false});
 
@@ -345,8 +334,8 @@ it('should set task to aborted if blocked for some ticks', function() {
     const creep : Creep = Game.creeps["Flix"];
 
     //when
-    dut.processTask(creep);
+    const state : TaskState = dut.processTask(creep, validHolder.id);
 
     expect(validHolder.meta.state).toBe(TaskStates.ABORTED);
-    expect(Creeps.lift).toBeCalled();
+    expect(state).toBe(TaskStates.ABORTED);
 });

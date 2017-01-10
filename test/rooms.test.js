@@ -50,10 +50,20 @@ it('should return construction sites', function() {
 
 it('should return sources', function() {
     const room : Room = Game.rooms["N0W0"];
-    room.find.mockReturnValueOnce(["bar"]);
+    room.find.mockReturnValueOnce([{id: "bar", pos: {x:25, y:25}}]);
 
     const source : Source[] = dut.getSources(room);
     expect(source.length).toBe(1);
+    expect(room.find).toBeCalled();
+});
+
+it('should not return sources near keeper lairs', function() {
+    const room : Room = Game.rooms["N0W0"];
+    room.find.mockReturnValueOnce([{id: "bar", pos: {x:25, y:25}}]);
+    room.lookForAtArea.mockReturnValueOnce([{structure:{structureType: STRUCTURE_KEEPER_LAIR}}]);
+
+    const source : Source[] = dut.getSources(room);
+    expect(source.length).toBe(0);
     expect(room.find).toBeCalled();
 });
 

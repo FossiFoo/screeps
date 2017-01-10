@@ -41,6 +41,7 @@ it('should record errors', function() {
 });
 
 it('should record warns', function() {
+
     testLogs(dut.warn);
 });
 

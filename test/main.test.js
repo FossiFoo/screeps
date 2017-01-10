@@ -120,6 +120,19 @@ it('should noop if creep is spawning', function() {
     expect(Kernel.processTask).not.toBeCalled();
 });
 
+it('should kill memory if flag is set', function() {
+
+    expect(Memory.version).toBe(1);
+
+    jest.mock("../src/ApiMemory.js");
+    const mem = (Memory: any);
+    mem.killMeYesReally = true;
+    dut.loop();
+    jest.unmock("../src/ApiMemory.js");
+
+    expect(Memory).toEqual({});
+});
+
 it('should call loop', function() {
     dut.loop();
 });

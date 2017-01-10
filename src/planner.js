@@ -24,6 +24,7 @@ import * as _unused from "./kernel";
 type KernelType = typeof _unused;
 import * as Rooms from "./rooms";
 import * as BodyShop from "./bodyshop";
+import * as Architect from "./architect";
 
 export let memory: PlannerMemory;
 
@@ -86,7 +87,7 @@ export function determineSource(room: Room,
         return {
             type: SourceTargets.ANY,
             room: room.name,
-            amount: maxNeed
+            energyNeed: maxNeed
         };
     }
 
@@ -97,6 +98,7 @@ export function determineSource(room: Room,
         sourceId = _.last(sortedSources).id;
     } else {
         sourceId = _.sample(sortedSources).id;
+        console.log("picked by chance: " + sourceId)
     }
 
     //FIXME write to memory? => should be mutable for now
@@ -112,9 +114,24 @@ export function determineSource(room: Room,
         type: SourceTargets.FIXED,
         room: room.name,
         id: sourceId,
-        amount: maxNeed
+        energyNeed: maxNeed
     };
 };
+
+export function removeEnergyNeed(source: SourceTarget): void {
+    const distribution : PlanningEnergyDistribution = getCurrentEnergyDistribution();
+    let roomDistribution : ?PlanningRoomDistribution = distribution.rooms[source.room];
+    if (!roomDistribution || source.type === SourceTargets.ANY) {
+        return;
+    }
+
+    const sourceDistribution : ?PlanningSourceDistribution = roomDistribution.sources[source.id];
+    if (!sourceDistribution) {
+        return;
+    }
+
+    sourceDistribution.totalUse = sourceDistribution.totalUse - source.energyNeed;
+}
 
 export function  constructTargetSpawn(roomName: RoomName, spawn: Spawn): EnergyTargetSpawn {
     return {
@@ -165,8 +182,9 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
         if (spawn) {
             target = constructTargetSpawn(room.name, spawn);
         } else {
-            const extensionsSorted : Extension[] = extensions.sort((e: Extension) => e.energy);
+            const extensionsSorted : Extension[] = _.sortBy(extensions, (e: Extension) => e.energy);
             const extension : ?Extension = _.head(extensionsSorted);
+            console.log(JSON.stringify(extension))
             if (extension && extension.energy < extension.energyCapacity) {
                 const capacity : number = EXTENSION_ENERGY_CAPACITY[room.controller.level];
                 const extensionTarget : EnergyTargetSpawn = {
@@ -195,7 +213,8 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
 
         const source : SourceTarget = {
             type: SourceTargets.ANY,
-            room: room.name
+            room: room.name,
+            energyNeed: target.energyNeed
         }
 
         const runningTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
@@ -264,11 +283,13 @@ export function upgradeController(Kernel: KernelType, room: Room, data: Planning
 export function buildExtension(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
 
     const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
-    const extension : ?ConstructionSite = _.find(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_EXTENSION);
-    if (!extension) {
+    const extensions : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_EXTENSION);
+    if (_.isEmpty(extensions)) {
         debug("[planner] no extensions found")
         return;
     }
+    const sortedExtensions = _.sortBy(extensions, (c: ConstructionSite) => c.progressTotal - c.progress);
+    const extension : ConstructionSite = _.head(sortedExtensions);
 
     // FIXME check better
     const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
@@ -340,6 +361,7 @@ export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Ga
     const distribution : PlanningEnergyDistribution = getCurrentEnergyDistribution();
 
     // - construction sites
+    Architect.constructBase(room, data);
 
     // - build extension
     buildExtension(Kernel, room, data, distribution);
@@ -354,4 +376,17 @@ export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Ga
     // - claim room
     // - assist room
     // - ???
+}
+
+export function taskEnded(Kernel: KernelType, taskId: TaskId): void {
+    const task : ?Task = Kernel.getTaskById(taskId);
+    if (!task) {
+        return;
+    }
+    switch (task.type) {
+        case TaskTypes.BUILD:
+        case TaskTypes.PROVISION:
+        case TaskTypes.BUILD:
+            removeEnergyNeed(task.source);
+    }
 }

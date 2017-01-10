@@ -12,8 +12,9 @@ import Memory from "./ApiMemory";
 import * as Config from "./config";
 
 export let DEBUG_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_DEBUG) || false;
-export let INFO_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_INFO) || false;
-export let WARN_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_WARN) || false;
+export let INFO_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_INFO) === undefined ? true : (Config.LOG_LEVEL >= Config.LOG_LEVEL_INFO);
+export let WARN_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_WARN) === undefined ? true : (Config.LOG_LEVEL >= Config.LOG_LEVEL_WARN);
+
 
 export function init(): void {
 }

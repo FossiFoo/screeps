@@ -46,6 +46,12 @@ export function init(game: GameI, mem: FooMemory): void {
     Game = game;
 };
 
+export function cleanUpTask(h: TaskHolder): void {
+    debug(`[kernel] [garbage] collecting ${h.id}`);
+    delete Memory.scheduler.tasks[h.id];
+    delete Memory.virtual.tasks[h.id];
+}
+
 export function collectGarbage(creepName: CreepName, id: TaskId) {
     const holder : ?TaskHolder = getHolderById(id);
     if (holder) {
@@ -59,10 +65,8 @@ export function collectGarbage(creepName: CreepName, id: TaskId) {
                holder.meta.state === TaskStates.ABORTED;
     });
     for (let h : TaskHolder of cleanupTasks) {
-        debug(`[kernel] [garbage] collecting ${h.id}`);
-        delete Memory.scheduler.tasks[h.id];
+        cleanUpTask(h);
     }
-    // virtual
 }
 
 function makeTaskHolder(id: TaskId, task: Task, meta: TaskMeta): TaskHolder {
@@ -177,17 +181,11 @@ export function getMemoryByTask(id: TaskId): TaskMemory {
     return init;
 }
 
-export function processTask(creep: Creep): void {
-    const taskId : ?TaskId = Creeps.getAssignedTask(creep);
-    if (!taskId) {
-        error("[kernel] [" + creep.name + "] has no task");
-        return;
-    }
+export function processTask(creep: Creep, taskId: TaskId): TaskState {
     const holder : ?TaskHolder = getHolderById(taskId);
     if (!holder) {
         error("[kernel] [" + creep.name + "] has unknown task " + taskId);
-        Creeps.lift(creep, taskId);
-        return;
+        return TaskStates.ABORTED;
     }
 
     const memory : TaskMemory = getMemoryByTask(taskId);
@@ -210,17 +208,16 @@ export function processTask(creep: Creep): void {
         if ( blockedTicks > TASK_BLOCKED_LIMIT ) {
             warn(`[kernel] [${creep.name}] aborting ${taskId} was blocked for ${blockedTicks}`);
             updateTaskState(holder, TaskStates.ABORTED);
-            Creeps.lift(creep, taskId);
         }
-        return;
+        return holder.meta.state;
     }
 
     if (step.final) {
-        holder.meta.state = TaskStates.FINISHED;
         info(`[kernel] [${creep.name}] finished task ${taskId}`);
-        Creeps.lift(creep, taskId);
-        return;
+        holder.meta.state = TaskStates.FINISHED;
+        return holder.meta.state;
     }
 
     holder.meta.state = TaskStates.RUNNING;
+    return holder.meta.state;
 }

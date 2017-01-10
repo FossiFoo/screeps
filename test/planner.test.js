@@ -206,5 +206,5 @@ it('should determine an underutilized source', function() {
     dut.init(Game, Memory);
     const target : SourceTarget = dut.determineSource(room, data, distribution, 666, TaskPriorities.UPKEEP, TaskTypes.UPGRADE);
 
-    expect(target).toMatchObject({type: SourceTargets.FIXED, id: "Source1", room: room.name, amount: 666});
+    expect(target).toMatchObject({type: SourceTargets.FIXED, id: "Source1", room: room.name, energyNeed: 666});
 });

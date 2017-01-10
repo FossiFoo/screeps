@@ -93,7 +93,7 @@ export function designOptimalCreep(task: Task, room: Room): ?CreepBody {
 
 export function spawnCreepForTask(Kernel: KernelType, spawn: Spawn, Game: GameI): ?CreepName {
     const room: Room = spawn.room;
-    if (spawn.spawning || _.size(Game.creeps) > 20) {
+    if (spawn.spawning || _.size(Game.creeps) > 10) {
         return;
     }
 

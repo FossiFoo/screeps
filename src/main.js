@@ -21,7 +21,7 @@ import { error, warn, info, debug } from "./monitoring";
 
 // Utils
 import * as Tasks from "./tasks";
-import { TaskTypes, TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes, TaskStates } from "./consts";
+import { TaskTypes, TaskPriorities, SourceTargets, CreepStates, EnergyTargetTypes, TaskStates, ENERGY_CAPACITY_MAX } from "./consts";
 
 // Game
 import * as Kernel from "./kernel";
@@ -96,12 +96,47 @@ export function processTasks(Kernel: KernelType, creep: Creep, Game: GameI) {
 
     debug(`processing task for ${creep.name}`);
 
-    Kernel.processTask(creep);
+    const taskId : ?TaskId = Creeps.getAssignedTask(creep);
+    if (!taskId) {
+        error("[kernel] [" + creep.name + "] has no task");
+        return;
+    }
+    const taskState : TaskState = Kernel.processTask(creep, taskId);
+    if (taskState === TaskStates.FINISHED || taskState === TaskStates.ABORTED) {
+        Creeps.lift(creep, taskId);
+        Planner.taskEnded(Kernel, taskId);
+    }
+
     // - worker
     // - miner
     // - hauler
     // - LDH
     // - claim
+}
+
+export function recordMilestones(Game: GameI, Memory: FooMemory) {
+    if (!Memory.milestones.cradle) {
+        Memory.milestones.cradle = _.keys(Game.rooms)[0];
+    }
+    const cradleName : RoomName = Memory.milestones.cradle;
+    const cradle : Room = Game.rooms[cradleName];
+    if (!Memory.milestones.gclLevel[Game.gcl.level]) {
+        Memory.milestones.gclLevel[Game.gcl.level] = Game.time;
+    }
+    const rcl : number = cradle.controller.level;
+    if (!Memory.milestones.spawnRclLevel[rcl]) {
+        Memory.milestones.spawnRclLevel[rcl] = Game.time;
+    }
+    const capacity : number = cradle.energyCapacityAvailable;
+    console.log(ENERGY_CAPACITY_MAX[rcl])
+    const max : number = ENERGY_CAPACITY_MAX[rcl];
+    if (!Memory.milestones.spawnCapacity[rcl] && capacity === max) {
+        Memory.milestones.spawnCapacity[rcl] = Game.time;
+    }
+    const towerCount : number = _.size(Rooms.getTowers(cradle));
+    if (!Memory.milestones.towers[rcl] && towerCount === CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl]) {
+        Memory.milestones.towers[rcl] = Game.time;
+    }
 }
 
 export function collectGarbage(Game: GameI, Memory: FooMemory) {
@@ -171,6 +206,7 @@ export function loopInternal(Game: GameI, FooMemory: FooMemory): void {
     // object caching
 
     Stats.recordStats(Game, FooMemory);
+    recordMilestones(Game, FooMemory);
 
     finish(FooMemory);
 }
@@ -183,6 +219,6 @@ export function loop(): void {
         return;
     }
 
-    const MemoryInternal: FooMemory = (ApiMemory.initializeMemory(Memory));
+    const MemoryInternal: FooMemory = (ApiMemory.initializeMemory(Memory, Game.time));
     loopInternal(Game, MemoryInternal);
 }

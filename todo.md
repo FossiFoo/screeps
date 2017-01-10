@@ -46,22 +46,25 @@ Todo
 https://en.wikipedia.org/wiki/Multilevel_feedback_queue
 a combination of fixed-priority preemptive scheduling, round-robin, and first in, first out algorithms. In this system, threads can dynamically increase or decrease in priority depending on if it has been serviced already, or if it has been waiting extensively. Every priority level is represented by its own queue, with round-robin scheduling among the high-priority threads and FIFO among the lower-priority ones. In this sense, response time is short for most threads, and short but critical system threads get completed very quickly.
 
-- planner: assign sources according to plan
-- directly compare needed energy for job
+- mine
+- pick up (hauler?)
+
+- assign source by lowest capacity
+- don't spawn creeps for idle tasks
 
 - remember last action and outcome
 - transfer energy to other target if close
 
 - check distance for working
 - repair broken creep: don't move
+- if source any, pick a target and stay with it?
 
-- mine
-- pick up (hauler?)
+- planner: assign sources according to plan
 
 - reassign new task according to old job
 - statistics about tasks
-- clean up tasks if nothing gets finished
 
+- clean up all tasks if nothing gets finished
 
 - try/catch wrap main tasks and creep actions
 function wrap(fn) {try {fn()} catch(e) {/*handle*/}}
@@ -159,8 +162,8 @@ PB Times
 RCL 2:  551
 1. EX: 1278             727
 2. EX: 2060             700
-3. EX: 2827             1000
-4. EX: 3665             650
+3. EX: 2827             870
+4. EX: 3665             830
 5. EX: 5024             1400
 
 tedivm: RCL3 in 16k

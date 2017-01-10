@@ -3,7 +3,7 @@
 import type { Task, TaskMeta, TaskHolder,
               TaskStepNavigate,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
-              KernelMemory, PlannerMemory,
+              KernelMemory, PlannerMemory, MilestoneMemory,
               PlanningRoomData,
               CreepBodyDefinitionByType,
               ProvisionTask, SourceTarget, EnergyTargetSpawn, EnergyTarget,
@@ -45,18 +45,21 @@ export const Targets = {
 
 const validSource : SourceTarget = {
     type: SourceTargets.ANY,
-    room: validRoomName
+    room: validRoomName,
+    energyNeed: 100
 }
 
 const otherRoomSource : SourceTarget = {
     type: SourceTargets.ANY,
-    room: otherRoomName
+    room: otherRoomName,
+    energyNeed: 100
 }
 
 const fixedSource : SourceTarget = {
     type: SourceTargets.FIXED,
     room: validRoomName,
-    id: "test-source-fixed-1"
+    id: "test-source-fixed-1",
+    energyNeed: 100
 }
 
 export const Sources = {
@@ -220,14 +223,24 @@ const validPlanner: PlannerMemory = {
     }
 }
 
+const validMilestones: MilestoneMemory = {
+    cradle: undefined,
+    gclLevel: {},
+    spawnRclLevel: {},
+    spawnCapacity: {},
+    towers: {}
+}
+
 const validMemory: OwnMemory = {
     initialized: true,
     version: 1,
     finished: true,
+    respawnTime: 1,
     stats: validStats,
     monitoring: validMonitoring,
     kernel: validKernel,
-    planner: validPlanner
+    planner: validPlanner,
+    milestones: validMilestones
 };
 
 export const Memorys = {

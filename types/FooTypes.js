@@ -89,14 +89,24 @@ export type PlannerMemory = {
     energyDistribution: PlanningEnergyDistribution
 };
 
+export type MilestoneMemory = {
+    cradle: ?RoomName,
+    gclLevel: {[level: number]: Tick},
+    spawnRclLevel: {[level: number]: Tick},
+    spawnCapacity: {[amount: number]: Tick},
+    towers: {[count: number]: Tick}
+}
+
 export type OwnMemory = {
     initialized: true,
     version: number,
     finished: boolean,
+    respawnTime: Tick,
     stats: StatsMemory,
     monitoring: MonitoringMemory,
     kernel: KernelMemory,
-    planner: PlannerMemory
+    planner: PlannerMemory,
+    milestones: MilestoneMemory
 };
 
 export type FooMemory = OwnMemory & MemoryI;
@@ -122,6 +132,7 @@ export type SourceTargetAny = {
 
 export type SourceTargetBase = {
     room: RoomName;
+    energyNeed: EnergyUnit;
 }
 
 export type SourceTarget = SourceTargetFixed | SourceTargetAny;

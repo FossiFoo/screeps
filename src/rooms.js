@@ -23,7 +23,13 @@ export function getBase(room: Room): RoomPosition {
 }
 
 export function getSources(room: Room): Source[] {
-    return room.find(FIND_SOURCES);
+    // ignore SK lair sources for usual operations
+    const allSources : Source[] = room.find(FIND_SOURCES);
+    const sources = _.filter(allSources, (s: Source): boolean => {
+        const structures = room.lookForAtArea(LOOK_STRUCTURES, s.pos.y - 3, s.pos.x -3, s.pos.y + 3, s.pos.x + 3, true);
+        return !_.some(structures, (f) => f && f.structure && f.structure.structureType === STRUCTURE_KEEPER_LAIR);
+    });
+    return sources;
 }
 
 export function getConstructionSites(room: Room): ConstructionSite[] {
@@ -33,6 +39,12 @@ export function getConstructionSites(room: Room): ConstructionSite[] {
 export function getExtensions(room: Room): Extension[] {
     const structures : Structure[] = room.find(FIND_MY_STRUCTURES);
     const extensions : any[] = _.filter(structures, (s: Structure) => s.structureType === STRUCTURE_EXTENSION);
+    return extensions;
+}
+
+export function getTowers(room: Room): Tower[] {
+    const structures : Structure[] = room.find(FIND_MY_STRUCTURES);
+    const extensions : any[] = _.filter(structures, (s: Structure) => s.structureType === STRUCTURE_TOWER);
     return extensions;
 }
 

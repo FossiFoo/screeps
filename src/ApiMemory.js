@@ -4,9 +4,9 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { FooMemory, OwnMemory } from "../types/FooTypes.js";
+import type { Tick, FooMemory, OwnMemory } from "../types/FooTypes.js";
 
-export function initializeMemory(mem: any | FooMemory): FooMemory {
+export function initializeMemory(mem: any | FooMemory, now: Tick): FooMemory {
 
     if (mem && mem.initialized === true) {
         return ((mem: any): FooMemory);
@@ -30,6 +30,7 @@ export function initializeMemory(mem: any | FooMemory): FooMemory {
         initialized: true,
         finished: false,
         version: 1,
+        respawnTime: now,
         stats: {
             time: 0,
             lastReport: 0,
@@ -53,6 +54,13 @@ export function initializeMemory(mem: any | FooMemory): FooMemory {
             energyDistribution: {
                 rooms: {}
             }
+        },
+        milestones: {
+            cradle: null,
+            gclLevel: {},
+            spawnRclLevel: {},
+            spawnCapacity: {},
+            towers: {}
         }
     };
 
@@ -60,5 +68,5 @@ export function initializeMemory(mem: any | FooMemory): FooMemory {
     return assigned;
 }
 
-export const MemoryInternal: FooMemory = initializeMemory(Memory);
+export const MemoryInternal: FooMemory = initializeMemory(Memory, Game.time);
 export default MemoryInternal;
