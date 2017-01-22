@@ -35,13 +35,13 @@ export function checkCPUOverrun(mem: FooMemory): void {
     if (mem.finished !== true) {
         error(`Tick did not finish: ${Game.time - 1}`);
     }
+    mem.finished = false;
 }
 
 export function init(Game: GameI, Memory: FooMemory): void {
     debug("tick: " + Game.time);
-    Memory.finished = false;
-    Stats.init(Game, Memory);
     Monitoring.init(Game, Memory);
+    Stats.init(Game, Memory);
     Kernel.init(Game, Memory);
     Tasks.init(Game, Memory);
     Planner.init(Game, Memory);
@@ -69,7 +69,7 @@ export function assignLocalTasks(Kernel: KernelType, creep: Creep, Game: GameI):
     debug(`[main] [${creep.name}] assigning local tasks`);
 
     const room : Room = creep.room; // FIXME make this assigned room?
-    const task : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
+    const task : ?TaskId = Kernel.getLocalWaiting(room.name, creep);
     if (!task) {
         //FIXME look for task somewhere else or recycle
         return;
@@ -128,7 +128,6 @@ export function recordMilestones(Game: GameI, Memory: FooMemory) {
         Memory.milestones.spawnRclLevel[rcl] = Game.time;
     }
     const capacity : number = cradle.energyCapacityAvailable;
-    console.log(ENERGY_CAPACITY_MAX[rcl])
     const max : number = ENERGY_CAPACITY_MAX[rcl];
     if (!Memory.milestones.spawnCapacity[rcl] && capacity === max) {
         Memory.milestones.spawnCapacity[rcl] = Game.time;
@@ -144,9 +143,11 @@ export function collectGarbage(Game: GameI, Memory: FooMemory) {
         if(!Game.creeps[c]) {
             info(`[creep] [garbage] burying ${c}`);
             const creepMemory : CreepMemory = Memory.creeps[c];
-            const taskId : ?TaskId = creepMemory.task.assignedId;
-            if (taskId) {
-                Kernel.collectGarbage(c, taskId);
+            if (creepMemory && creepMemory.task) {
+                const taskId : ?TaskId = creepMemory.task.assignedId;
+                if (taskId) {
+                    Kernel.collectGarbage(c, taskId);
+                }
             }
             delete Memory.creeps[c];
         }
@@ -156,9 +157,9 @@ export function collectGarbage(Game: GameI, Memory: FooMemory) {
 
 export function loopInternal(Game: GameI, FooMemory: FooMemory): void {
 
-    checkCPUOverrun(FooMemory);
-
     init(Game, FooMemory);
+
+    checkCPUOverrun(FooMemory);
 
     const rooms: RoomMap = Game.rooms;
     const creeps: CreepMap = Game.creeps;

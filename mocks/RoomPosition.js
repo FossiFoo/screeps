@@ -10,12 +10,12 @@ export default class RoomPosition  {
     y: number;
     createConstructionSite(structureType: string) {return 0;}
     createFlag(name?: string, color?: number, secondaryColor?: number) {return 0;};
-    findClosestByPath<T>( type: number, opts?: FindPathOpts & { filter?: any | string, algorithm?: string } ) {return;}
-    findClosestByPath<T>( objects: T[] | RoomPosition[], opts?: FindPathOpts & { filter?: any | string, algorithm?: string } ) {return;}
-    findClosestByRange<T>(type: number, opts?: { filter: any | string }) {return;}
-    findClosestByRange<T>(objects: T[] | RoomPosition[], opts?: { filter: any | string }) {return;}
-    findInRange<T>(type: number, range: number, opts?: { filter?: any | string }) {return null;}
-    findInRange<T>( objects: T[] | RoomPosition[], range: number, opts?: { filter?: any | string } ) {return}
+    findClosestByPath( type: number, opts?: FindPathOpts & { filter?: any | string, algorithm?: string } ) {return;}
+    findClosestByPath( objects: [] | RoomPosition[], opts?: FindPathOpts & { filter?: any | string, algorithm?: string } ) {return;}
+    findClosestByRange(type: number, opts?: { filter: any | string }) {return;}
+    findClosestByRange(objects: [] | RoomPosition[], opts?: { filter: any | string }) {return;}
+    findInRange(type: number, range: number, opts?: { filter?: any | string }) {return null;}
+    findInRange( objects: [] | RoomPosition[], range: number, opts?: { filter?: any | string } ) {return}
     findPathTo(x: number, y: number, opts?: FindPathOpts) {return}
     findPathTo( target: RoomPosition | { pos: RoomPosition }, opts?: FindPathOpts ) {return}
     getDirectionTo(x: number, y: number) {return 0;}

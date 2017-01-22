@@ -7,6 +7,7 @@ import type { Task, TaskId, TaskState, TaskPrio,
               TaskStepTransfer,
               TaskStepUpgrade,
               TaskStepBuild,
+              TaskStepPickup,
               CreepBodyDefinitionByType,
               CreepMemory, CreepState } from "../types/FooTypes.js";
 
@@ -18,6 +19,8 @@ declare var _ : Lodash;
 
 import { TaskStates, CreepStates } from "./consts";
 import { debug, info, warn, error } from "./monitoring";
+
+import * as Rooms from "./rooms";
 
 export function memory(creep: Creep): CreepMemory {
     if (creep.memory.version === CREEP_MEMORY_VERSION) {
@@ -35,7 +38,7 @@ export function memory(creep: Creep): CreepMemory {
 }
 
 export function assign(creep: Creep, taskId: TaskId, task: Task): void {
-    var mem : CreepMemory = memory(creep);
+    const mem : CreepMemory = memory(creep);
     info(`[creep] [${creep.name}] assigned: ${taskId}`);
     mem.task.assignedId = taskId;
 }
@@ -76,9 +79,13 @@ export function navigate(creep: Creep, stepParam: any): TaskStepResult {
     const position : Position = destination.position;
     debug("[creep] [" + creep.name + "] will navigate to " + position.x + "/" + position.y);
 
+    const currentPosition : Position = creep.pos;
+    Rooms.incrementTerrainUsage(creep.room, currentPosition.x, currentPosition.y);
+
     //FIXME move to correct room
 
-    const result : CreepMoveToReturn = creep.moveTo(position.x, position.y);
+    const ignoreCreeps : boolean = step.ignoreCreeps || false;
+    const result : CreepMoveToReturn = creep.moveTo(position.x, position.y, {ignoreCreeps});
 
     if (result !== OK && result !== ERR_TIRED) {
         warn("[creep] [" + creep.name + "] can't navigate " + result);
@@ -155,12 +162,30 @@ export function build(creep: Creep, stepParam: any): TaskStepResult {
     return {success: true};
 }
 
+export function pickup(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepPickup = stepParam;
+
+    const resourceId : ResourceId = step.resourceId;
+    const resource : ?Resource = Game.getObjectById(resourceId);
+    if (!resource) {
+        error("[creep] [" + creep.name + "] can't find resource " + resourceId);
+        return {error: "unknown object: " + resourceId};
+    }
+    const result : CreepPickupReturn = creep.pickup(resource);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't pickup " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
 const stepFunctions = {
     "NAVIGATE": navigate,
     "HARVEST": harvest,
     "TRANSFER": transfer,
     "UPGRADE": upgrade,
     "BUILD": build,
+    "PICKUP": pickup,
     "NOOP": noop
 }
 

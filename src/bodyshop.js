@@ -7,7 +7,7 @@ declare var _ : Lodash;
 // types
 import type { CreepBody, CreepBodyDefinitionByType,
               FooMemory,
-              Task, TaskId, TaskState, TaskPrio, TaskType } from "../types/FooTypes.js";
+              Task, TaskId, TaskState, TaskPrio, TaskType, TaskHolder } from "../types/FooTypes.js";
 
 import { error, warn, info, debug } from "./monitoring";
 
@@ -20,6 +20,7 @@ import * as Creeps from "./creeps";
 
 
 export function createCreep(spawn: Spawn, creepBody: CreepBody): ?CreepName {
+    debug("[bodyshop] ["+ spawn.name + "] will try to spawn: " + JSON.stringify(creepBody));
     const returnValue: number | string = spawn.createCreep(creepBody);
 
     if (typeof returnValue !== "string") {
@@ -67,12 +68,30 @@ export function designAffordableWorker(maxEnergy: EnergyUnit): ?CreepBody {
     return body;
 }
 
+export function designAffordableMiner(maxEnergy: EnergyUnit): ?CreepBody {
+    const maxWork : number = maxEnergy - BODYPART_COST["move"];
+    const maxPartsWork : number = Math.floor(maxWork / (BODYPART_COST["work"]));
+    const partsWork : number = Math.min(maxPartsWork, 5);
+    if (partsWork < 2) {
+        return null;
+    }
+
+    let body: CreepBody = [MOVE];
+    for(let i:number = 0; i < partsWork; i++) {
+        body.push(WORK);
+    }
+    return body;
+}
+
 export function designCreepForEnergy(taskType: TaskType, maxEnergy: EnergyUnit): ?CreepBody {
     switch (taskType) {
         case TaskTypes.UPGRADE:
         case TaskTypes.BUILD:
         case TaskTypes.PROVISION: {
             return designAffordableWorker(maxEnergy);
+        }
+        case TaskTypes.MINE: {
+            return designAffordableMiner(maxEnergy);
         }
     }
     error("[kernel] [population] task type not known " + taskType);
@@ -92,31 +111,46 @@ export function designOptimalCreep(task: Task, room: Room): ?CreepBody {
 }
 
 export function spawnCreepForTask(Kernel: KernelType, spawn: Spawn, Game: GameI): ?CreepName {
+
     const room: Room = spawn.room;
-    if (spawn.spawning || _.size(Game.creeps) > 10) {
+    const creepCount : number = _.size(Game.creeps);
+    if (spawn.spawning || creepCount > 15) { //FIXME make relative to work
         return;
     }
 
-    const taskId : ?TaskId = Kernel.getLocalWaiting(room.name /* , creep*/);
+    const taskId : ?TaskId = Kernel.getLocalWaiting(room.name, null, Game.time);
     if (!taskId) {
+        warn(`[bodyshop] [${room.name}] [spawn] did not find a waiting task`)
         return;
     }
 
     const task : ?Task = Kernel.getTaskById(taskId);
     if (!task) {
+        error(`[bodyshop] [${room.name}] [spawn] ${taskId} is missing`)
         return;
     }
 
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return (state === TaskStates.WAITING || state === TaskStates.RUNNING);
+    });
+
+    if (task.prio < TaskPriorities.UPGRADE) {
+        warn(`[bodyshop] [${room.name}] no normal priority task found`);
+    }
+
     let creepBody : ?CreepBody;
-    if (task.prio > TaskPriorities.UPKEEP) {
+    if (task.prio >= TaskPriorities.URGENT) {
         creepBody = designAffordableCreep(task, room);
     } else {
         creepBody = designOptimalCreep(task, room);
     }
     if (!creepBody) {
-        debug(`[bodyshop] [${room.name}] no suitable body could be constructed for ${taskId}`);
+        info(`[bodyshop] [${room.name}] no suitable body could be constructed for ${taskId} ${task.type} ${task.prio}`);
         return;
     }
+
+    debug(`[bodyshop] [${room.name}] will spawn for task ${taskId} ${task.type} ${task.prio}`);
 
     return createCreep(spawn, creepBody);
 }

@@ -2,9 +2,9 @@
 
 import { TaskStates, TaskTypes, TaskStepTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
 import type { SourceFixed, SourceAny,
-              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild,
+              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild, TaskTypeMine,
               EnergyTargetTypeSpawn, EnergyTargetTypeController, EnergyTargetTypeConstruction,
-              CreepMemoryVersion } from "../types/ConstTypes.js";
+              CreepMemoryVersion, RoomMemoryVersion } from "../types/ConstTypes.js";
 
 export type Tick = number;
 
@@ -43,7 +43,8 @@ export type TaskStats = {
     noTasksBlocked: number;
     noTasksFinished: number;
     noTasksAborted: number;
-    types: string;
+    typesWaiting: string;
+    typesRunning: string;
 };
 
 export type StatsMemory = {
@@ -67,7 +68,10 @@ export type MonitoringMemory = {
     errors: ErrorEntry[]
 };
 
-export type TaskMemory = Object;
+export type TaskMemory = {
+    lastStep: TaskStep,
+    lastResult: TaskStepResult
+} & Object;
 
 export type TaskMemoryHolder = {
     memory: TaskMemory;
@@ -175,6 +179,20 @@ export type TaskBuild = {
 export type TaskEnergyTransmission = {
     source: SourceTarget;
     target: EnergyTarget;
+} & TaskVariable;
+
+export type TaskMine = {
+    type: TaskTypeMine;
+    source: SourceTarget;
+} & TaskTimed;
+
+export type TaskVariable = {
+    spawn: "variable";
+} & TaskBase;
+
+export type TaskTimed = {
+    spawn: "timed";
+    spawnTime: Tick;
 } & TaskBase;
 
 export type TaskBase = {
@@ -184,7 +202,7 @@ export type TaskBase = {
     prio: TaskPrio;
 };
 
-export type Task = ProvisionTask | UpgradeTask | TaskBuild;
+export type Task = ProvisionTask | UpgradeTask | TaskBuild | TaskMine;
 
 export type TaskId = string;
 
@@ -217,6 +235,9 @@ export type CreepBody = BODYPART_TYPE[];
 
 export type CreepBodyDefinitionByType = {[type: BODYPART_TYPE]: BodyPartDefinition[]};
 
+/* export type CreepPartCount = {[type: BODYPART_TYPE]: number};*/
+export type CreepPartCount = {[type: string]: number};
+
 export type CreepState = $Keys<typeof CreepStates>;
 
 export type TaskStepResult = {
@@ -231,7 +252,8 @@ export type TaskStepNavigate = {
     destination: {
         room: RoomName,
         position: Position
-    }
+    },
+    ignoreCreeps?: boolean
 } & TaskStep;
 
 export type TaskStepHarvest = {
@@ -252,6 +274,11 @@ export type TaskStepUpgrade = {
 export type TaskStepBuild = {
     type: "BUILD",
     targetId: ObjectId
+} & TaskStep;
+
+export type TaskStepPickup = {
+    type: "PICKUP",
+    resourceId: ResourceId
 } & TaskStep;
 
 export type TaskStepNoop = {
@@ -289,7 +316,8 @@ export type PlanningRoomData = {
 export type PlanningSourceDistribution = {
     id: SourceId,
     totalCapacity: EnergyUnit,
-    totalUse: EnergyUnit
+    totalUse: EnergyUnit,
+    minerAssigned: ?Tick
 };
 
 export type PlanningRoomDistribution = {
@@ -300,6 +328,21 @@ export type PlanningRoomDistribution = {
 
 export type PlanningEnergyDistribution = {
     rooms: {[name: RoomName]: PlanningRoomDistribution}
+}
+
+export type TerrainUsageCell = {
+    x: number;
+    y: number;
+    count: number;
+}
+
+export type TerrainUsageMatrix = TerrainUsageCell[][];
+
+export type RoomMemory = {
+    version: RoomMemoryVersion,
+    usage: {
+        terrain: TerrainUsageMatrix
+    }
 }
 
 export type Predicate<T> = (t: T) => boolean;

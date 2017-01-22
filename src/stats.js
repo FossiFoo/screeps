@@ -13,6 +13,19 @@ const REPORT_FREQUENCY = 10;
 export function init(Game: GameI, Memory: FooMemory): void {
 }
 
+export function taskStatsForState(tasks: TaskHolderMap, state: TaskState): string {
+
+    const tasksForState : TaskHolder[] = _.filter(tasks, (h) => h.meta.state === state);
+    const sortedTasks : TaskHolder[] = _.sortBy(tasksForState, (h) => h.task.type);
+    const countByType : {[name: string]: number} = _.countBy(sortedTasks, (h) => h.task.type);
+
+    let typesByState : string = "";
+    for (let i in countByType) {
+        typesByState = typesByState + i.substr(0, 3) + ": " + countByType[i] + " ";
+    }
+    return typesByState;
+}
+
 export function makeTaskStats(tasks: TaskHolderMap): TaskStats {
 
     const noTasks : number = _.size(tasks);
@@ -22,13 +35,8 @@ export function makeTaskStats(tasks: TaskHolderMap): TaskStats {
         });
 
 
-    const runningTasks : TaskHolder[] = _.filter(tasks, (h) => h.meta.state === "RUNNING");
-    const runByType : {[name: string]: number} = _.countBy(runningTasks, (h) => h.task.type);
-
-    let types : string = "";
-    for (let i in runByType) {
-        types = types + i.substr(0, 3) + ": " + runByType[i] + " ";
-    }
+    let typesWaiting : string = taskStatsForState(tasks, TaskStates.WAITING);
+    let typesRunning : string = taskStatsForState(tasks, TaskStates.RUNNING);
 
     let taskStats : TaskStats = {
         noTasks,
@@ -38,7 +46,8 @@ export function makeTaskStats(tasks: TaskHolderMap): TaskStats {
         noTasksBlocked : noTasksByState[TaskStates.BLOCKED] || 0,
         noTasksFinished : noTasksByState[TaskStates.FINISHED] || 0,
         noTasksAborted : noTasksByState[TaskStates.ABORTED] || 0,
-        types
+        typesWaiting,
+        typesRunning
     };
 
     return taskStats;
@@ -177,9 +186,12 @@ export function recordStats(Game: GameI, Memory: FooMemory): void {
     const used : string = Game.cpu.getUsed().toFixed(3);
     const noCreeps : number = _.size(Game.creeps);
     const noCreepsMem : number = _.size(Memory.creeps);
-    info(`= ${time} ==============`);
+    const padTime : string = _.padRight(time + " ", 10, "=");
+
+    info(`= ${padTime}==================================================`);
     info(`Tasks: ${taskStats.noTasks}: ${taskStats.noTasksWaiting}/${taskStats.noTasksAssigned}/${taskStats.noTasksRunning}/${taskStats.noTasksBlocked}/${taskStats.noTasksFinished}/${taskStats.noTasksAborted}`);
-    info(`Types: ${taskStats.types}`);
+    info(`Waiting: ${taskStats.typesWaiting}`);
+    info(`Running: ${taskStats.typesRunning}`);
     info(`Creeps: ${noCreeps} Mem: ${noCreepsMem} CPU: ${used}/${Game.cpu.tickLimit}/${Game.cpu.bucket}`);
-    info("==========================");
+    info("====================================================================");
 }

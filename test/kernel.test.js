@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder, CreepBody, TaskStep } from "../types/FooTypes.js";
+import type { Task, TaskId, FooMemory, KernelMemory, TaskState, TaskMeta, TaskHolder, CreepBody, TaskStep, TaskStepResult } from "../types/FooTypes.js";
 
 // get flow to recognize the existing "_" as lodash
 import typeof * as Lodash from "lodash";
@@ -248,14 +248,17 @@ it('should initialze task memory if not present', function() {
     dut.init(Game, Memory);
     const memory = dut.getMemoryByTask(id);
 
-    expect(memory).toEqual({});
+    expect(memory).toEqual(Testdata.Memories.validTaskMemory);
     expect(Memory.kernel.virtual.tasks[id]).toBeDefined();
 });
 
 it('should return task memory if present', function() {
     const id : TaskId = "test-task-1234";
 
-    Memory.kernel.virtual.tasks[id].memory = {present: true};
+    const mem = _.cloneDeep(Testdata.Memories.validTaskMemory);
+    mem.present = true;
+    Memory.kernel.virtual.tasks[id].memory = mem;
+
     dut.init(Game, Memory);
     const memory = dut.getMemoryByTask(id);
 

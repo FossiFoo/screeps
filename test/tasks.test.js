@@ -1,6 +1,6 @@
 /* @flow */
 
-import type { Tick, TaskPrio, ProvisionTask, UpgradeTask, TaskBuild, Task, TaskStep, TaskStepNavigate, Position, SourceId } from "../types/FooTypes.js";
+import type { Tick, TaskPrio, ProvisionTask, UpgradeTask, TaskBuild, Task, TaskStep, TaskStepNavigate, Position, SourceId, TaskMemory } from "../types/FooTypes.js";
 
 // get flow to recognize the existing "_" as lodash
 import typeof * as Lodash from "lodash";
@@ -27,7 +27,7 @@ import RoomPositionMock from "../mocks/RoomPosition.js";
 
 // test data
 jest.unmock("../test/testdata.js");
-import { Tasks, Sources, Targets } from "../test/testdata.js";
+import { Tasks, Sources, Targets, Memories } from "../test/testdata.js";
 
 it('should construct any source provisioning task', function() {
     const time: Tick = 0;
@@ -56,14 +56,14 @@ it('should get the next step for the task', function() {
     const task : any = _.cloneDeep(Tasks.valid);
     task.type = "TEST";
 
-    const step : TaskStep = dut.getNextStep(task, creep, TaskStates.ASSIGNED, {});
+    const step : TaskStep = dut.getNextStep(task, creep, TaskStates.ASSIGNED, Memories.validTaskMemory);
 
     expect(step).toEqual({type: "NOOP", init: true, final: true});
     expect(Monitoring.warn).toBeCalled();
 });
 
 it('should construct steps to move to a source', function() {
-    const step : TaskStep = dut.constructMoveStep({x: 3, y:4}, "N1W1", {});
+    const step : TaskStep = dut.constructMoveStep({x: 3, y:4}, "N1W1", true, {});
     expect(step).toMatchObject({type: "NAVIGATE", destination:{position:{x:3, y:4}}});
 });
 
@@ -145,11 +145,11 @@ it('should generate navigation step when given source', function() {
         type: SourceTargets.FIXED,
         id: sourceId
     }
-    const memory = {};
+    const memory = Memories.validTaskMemory;
     const cb = jest.fn();
 
     dut.init(Game, Memory);
-    const step : TaskStep = dut.energyTransmission(task, creep, true, memory, cb);
+    const step : TaskStep = dut.energyTransmission(task, creep, true, memory, 1, cb);
 
     expect(step).toMatchObject({type: "NAVIGATE", destination:{position:{x:10, y:20}}});
 });
@@ -164,20 +164,26 @@ it('should generate navigation step when ANY source', function() {
     creep.pos = positionMock;
 
     dut.init(Game, Memory);
-    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, true, {});
+    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, true, Memories.validTaskMemory);
 
     expect(step).toMatchObject({type: "NAVIGATE", destination:{position:{x:10, y:20}}});
 });
 
 it('should generate harvest step when adjecent to source', function() {
-    const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.findClosestByRange.mockReturnValueOnce({pos: {x:1,y:2}});
-    positionMock.isNearTo.mockReturnValueOnce(true);
+
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue({pos: positionMock});
+
+    const creep : Creep = Game.creeps["Leo"];
+    positionMock.findClosestByRange.mockReturnValueOnce({pos: positionMock});
+    positionMock.findInRange.mockReturnValueOnce([]);
+    positionMock.inRangeTo.mockReturnValue(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
     positionMock.y = 2;
     creep.pos = positionMock;
+
 
     const sourceId : SourceId = "source";
     const task : any = _.cloneDeep(Tasks.valid);
@@ -187,25 +193,35 @@ it('should generate harvest step when adjecent to source', function() {
         id: sourceId
     }
 
+    const mem : TaskMemory = _.cloneDeep(Memories.validTaskMemory);
+    mem.state = "AQUIRE";
+
     dut.init(Game, Memory);
-    const step : TaskStep = dut.provisioningStep(task, creep, false, {state: "AQUIRE"});
+    const step : TaskStep = dut.provisioningStep(task, creep, false, mem);
 
     expect(step).toMatchObject({type: "HARVEST"});
 });
 
 it('should generate harvest step when close to ANY source', function() {
-    const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.findClosestByPath.mockReturnValue({pos: {x:1,y:2}, id: "SourceId"});
+
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue({pos: positionMock});
+
+    const creep : Creep = Game.creeps["Leo"];
+    positionMock.findClosestByPath.mockReturnValue({pos: positionMock, id: "SourceId"});
     positionMock.findInRange.mockReturnValue([{id: "SourceId"}]);
-    positionMock.isNearTo.mockReturnValueOnce(true);
+    positionMock.inRangeTo.mockReturnValue(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
     positionMock.y = 2;
     creep.pos = positionMock;
 
+    const mem : TaskMemory = _.cloneDeep(Memories.validTaskMemory);
+    mem.state = "AQUIRE";
+
     dut.init(Game, Memory);
-    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, false, {state: "AQUIRE"});
+    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, false, mem);
 
     expect(step).toMatchObject({type: "HARVEST", sourceId: "SourceId"});
 });
@@ -224,19 +240,22 @@ it('should move to target if full', function() {
     creep.carry.energy = 100;
     creep.carryCapacity = 100;
 
+    const mem : TaskMemory = _.cloneDeep(Memories.validTaskMemory);
+    mem.state = "AQUIRE";
+
     dut.init(Game, Memory);
-    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, false, {state: "AQUIRE"});
+    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, false, mem);
 
     expect(step).toMatchObject({type: "NAVIGATE", destination:{position:{x:10, y:20}}});
 });
 
-it('should transfer to target if full and adjacent', function() {
+it('should transfer to target if full and in work range', function() {
     const GameMock : GameMock = ((Game: any): GameMock);
     GameMock.setGetObjectByIdReturnValue({pos: {x:10, y:20}});
 
     const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.isNearTo.mockReturnValueOnce(true);
+    positionMock.inRangeTo.mockReturnValueOnce(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
     positionMock.y = 2;
@@ -244,19 +263,22 @@ it('should transfer to target if full and adjacent', function() {
     creep.carry.energy = 99;
     creep.carryCapacity = 100;
 
+    const mem : TaskMemory = _.cloneDeep(Memories.validTaskMemory);
+    mem.state = "TRANSMIT";
+
     dut.init(Game, Memory);
-    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, false, {state: "TRANSMIT"});
+    const step : TaskStep = dut.provisioningStep(Tasks.valid, creep, false, mem);
 
     expect(step).toMatchObject({type: "TRANSFER", targetId: Tasks.valid.target.targetId});
 });
 
-it('should transfer to target if full and adjacent', function() {
+it('should build target if full and in work range', function() {
     const GameMock : GameMock = ((Game: any): GameMock);
     GameMock.setGetObjectByIdReturnValue({pos: {x:10, y:20}});
 
     const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.isNearTo.mockReturnValueOnce(true);
+    positionMock.inRangeTo.mockReturnValueOnce(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
     positionMock.y = 2;
@@ -264,8 +286,11 @@ it('should transfer to target if full and adjacent', function() {
     creep.carry.energy = 99;
     creep.carryCapacity = 100;
 
+    const mem : TaskMemory = _.cloneDeep(Memories.validTaskMemory);
+    mem.state = "TRANSMIT";
+
     dut.init(Game, Memory);
-    const step : TaskStep = dut.buildStep(Tasks.validBuild, creep, false, {state: "TRANSMIT"});
+    const step : TaskStep = dut.buildStep(Tasks.validBuild, creep, false, mem);
 
     expect(step).toMatchObject({type: "BUILD", targetId: Tasks.validBuild.target.targetId});
 });
@@ -277,14 +302,14 @@ it('should make a transmission if upgrading', function() {
 
     const creep : Creep = Game.creeps["Leo"];
     const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
-    positionMock.isNearTo.mockReturnValueOnce(true);
+    positionMock.inRangeTo.mockReturnValueOnce(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
     positionMock.y = 2;
     creep.pos = positionMock;
     creep.carry.energy = 100;
     creep.carryCapacity = 100;
-    const memory = {};
+    const memory = Memories.validTaskMemory;
 
     dut.init(Game, Memory);
     const step : TaskStep = dut.upgradeStep(Tasks.validUpgrade, creep, false, memory);
@@ -299,7 +324,7 @@ it('should be done if energy transmitted', function() {
     creep.carryCapacity = 100;
     const cb = jest.fn();
 
-    const step : TaskStep = dut.energyTransmission(Tasks.validUpgrade, creep, false, {state: "TRANSMIT"}, cb);
+    const step : TaskStep = dut.energyTransmission(Tasks.validUpgrade, creep, false, {state: "TRANSMIT"}, 1, cb);
 
     expect(step).toMatchObject({type: "NOOP", final: true});
     expect(cb).not.toBeCalled();
@@ -312,7 +337,7 @@ it('should return with noop if source not found', function() {
     GameMock.setGetObjectByIdReturnValue(null);
 
     dut.init(GameMock, Memory);
-    const step : TaskStep = dut.aquireEnergy(Sources.fixed, positionMock, true);
+    const step : TaskStep = dut.aquireEnergy(Sources.fixed, positionMock, true, Memories.validTaskMemory);
 
     expect(step).toMatchObject({type: "NOOP", final: true});
 });

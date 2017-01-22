@@ -10,5 +10,7 @@ export type EnergyTargetTypeConstruction = "CONSTRUCTION";
 export type TaskTypeProvision = "PROVISION";
 export type TaskTypeUpgrade = "UPGRADE";
 export type TaskTypeBuild = "BUILD";
+export type TaskTypeMine = "MINE";
 
 export type CreepMemoryVersion = "0.0.1";
+export type RoomMemoryVersion = "0.0.1";

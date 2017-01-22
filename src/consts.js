@@ -1,11 +1,12 @@
 /* @flow */
 
 import type { SourceAny, SourceFixed,
-              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild,
+              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild, TaskTypeMine,
               EnergyTargetTypeSpawn, EnergyTargetTypeController, EnergyTargetTypeConstruction,
-              CreepMemoryVersion } from "../types/ConstTypes.js"
+              CreepMemoryVersion, RoomMemoryVersion } from "../types/ConstTypes.js"
 
 export const CREEP_MEMORY_VERSION : CreepMemoryVersion = "0.0.1";
+export const ROOM_MEMORY_VERSION : RoomMemoryVersion = "0.0.1";
 
 const TASK_PRIO_MAX = 1000000;
 
@@ -32,7 +33,8 @@ export const TaskStates = {
 export const TaskTypes = {
     PROVISION: ("PROVISION": TaskTypeProvision),
     UPGRADE: ("UPGRADE": TaskTypeUpgrade),
-    BUILD: ("BUILD": TaskTypeBuild)
+    BUILD: ("BUILD": TaskTypeBuild),
+    MINE: ("MINE": TaskTypeMine)
 }
 
 export const TaskStepTypes = {
@@ -41,7 +43,8 @@ export const TaskStepTypes = {
     HARVEST: "HARVEST",
     TRANSFER: "TRANSFER",
     UPGRADE: "UPGRADE",
-    BUILD: "BUILD"
+    BUILD: "BUILD",
+    PICKUP: "PICKUP"
 }
 
 export const SourceTargets = {

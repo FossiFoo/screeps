@@ -4,12 +4,12 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { Predicate,
+import type { Predicate, Tick,
               Task, TaskId, TaskState, TaskMeta, TaskHolder, TaskPrio, TaskType,
               TaskStep, TaskStepResult,
               Position,
               FooMemory, KernelMemory, TaskHolderMap, TaskMemoryHolder, TaskMemory,
-              CreepBody } from "../types/FooTypes.js";
+              CreepPartCount } from "../types/FooTypes.js";
 
 type HolderPredicate = Predicate<TaskHolder>;
 
@@ -26,7 +26,7 @@ const BODYPART_COST = {
 };
 
 
-import { TaskStates, TaskTypes } from "./consts";
+import { TaskStates, TaskTypes, TaskStepTypes } from "./consts";
 
 import { debug, info, warn, error } from "./monitoring";
 
@@ -100,30 +100,80 @@ export function addTask(task: Task): ?TaskId {
     return id;
 }
 
-export function makeFnFilterLocalByStatus(localRoom: RoomName, status: TaskState): HolderPredicate {
-    return makeFnFilterLocal(localRoom, (holder: TaskHolder) => {
-        return holder.meta.state === status
+export function hasParts(creep: Creep, partNeed: CreepPartCount) {
+    const partCounts : CreepPartCount  =
+        _.countBy(creep.body, (partDef: BodyPartDefinition): BODYPART_TYPE => partDef.type);
+    for (let neededPart in partNeed) {
+        const neededCount : number = partNeed[neededPart];
+        const partCount : ?number = partCounts[neededPart];
+        if (!partCount || partCount < neededCount) {
+            return false;
+        }
+    }
+    return true;
+}
+
+export function matchesCreep(creep: Creep, task: Task): boolean {
+    // body, ticksToLive, carry, carryCapacity
+    switch(task.type) {
+        case TaskTypes.UPGRADE:
+        case TaskTypes.BUILD:
+        case TaskTypes.PROVISION: {
+            if(!hasParts(creep, {"move": 1, "work": 1, "carry": 1})) {
+                return false;
+            }
+            return true;
+        }
+        case TaskTypes.MINE: {
+            if(!hasParts(creep, {"work": 2})) {
+                return false;
+            }
+            return true;
+        }
+    }
+    warn("[kernel] unknown task: " + task.type);
+    return true;
+}
+
+export function makeFnFilterLocalByStatusAndCapabilities(localRoom: RoomName, status: TaskState, creep: Creep): HolderPredicate {
+    return makeFnFilterLocalByStatus(localRoom, status, (holder: TaskHolder) => {
+        return matchesCreep(creep, holder.task);
     });
 }
 
-export function makeFnFilterLocal(localRoom: RoomName, filterFn: HolderPredicate): HolderPredicate {
+export function makeFnFilterLocalByStatus(localRoom: RoomName, status: TaskState, filterFn: ?HolderPredicate): HolderPredicate {
+    return makeFnFilterLocal(localRoom, (holder: TaskHolder) => {
+        return holder.meta.state === status && (filterFn ? filterFn(holder) : true);
+    });
+}
+
+export function makeFnFilterLocal(localRoom: RoomName, filterFn: ?HolderPredicate): HolderPredicate {
     return (holder: TaskHolder) => {
-        return holder.task.assignedRoom === localRoom && filterFn(holder);
+        const isTimeBlocked : boolean = holder.task.spawn === "timed" && Game.time < holder.task.spawnTime;
+        return holder.task.assignedRoom === localRoom &&
+               !isTimeBlocked &&
+               (filterFn ? filterFn(holder) : true);
     };
 }
 
 function filterHolders(filterFn: HolderPredicate): TaskHolder[] {
-    // body, ticksToLive, carry, carryCapacity
     const tasks : TaskHolderMap = Memory.scheduler.tasks;
     const localTasks : TaskHolder[] = _.filter(tasks, filterFn);
     return localTasks;
 }
 
-export function getLocalWaiting(room: RoomName /* , creep: Creep*/): ?TaskId {
-    const localTasks : TaskHolder[] = filterHolders(makeFnFilterLocalByStatus(room, TaskStates.WAITING));
+export function getLocalWaiting(room: RoomName, creep: ?Creep, time: ?Tick): ?TaskId {
+    const filterFn = creep ?
+                     makeFnFilterLocalByStatusAndCapabilities(room, TaskStates.WAITING, creep) :
+                     makeFnFilterLocalByStatus(room, TaskStates.WAITING);
+    const localTasks : TaskHolder[] = filterHolders(filterFn);
     const sortedTasks : TaskHolder[] = _.sortBy(localTasks, (holder: TaskHolder): TaskPrio => holder.task.prio);
     const first : ?TaskHolder = _.last(sortedTasks); // highest prio
-    info("[Kernel] found " + (first ? first.id : "none") + " as next task for " + room);
+    if (first) {
+        info(`[Kernel] found ${first.task.type} ${first.id} as next task for ${room}`);
+    } else {
+        warn("[Kernel] found no next task for " + room);
+    }
     return first && first.id;
 }
 
@@ -176,7 +226,10 @@ export function getMemoryByTask(id: TaskId): TaskMemory {
     if (holder) {
         return holder.memory;
     }
-    const init : TaskMemory = {};
+    const init : TaskMemory = {
+        lastStep: ({type: TaskStepTypes.NOOP, init: true, final: false}: TaskStep),
+        lastResult: ({}: TaskStepResult)
+    };
     Memory.virtual.tasks[id] = {memory: init};
     return init;
 }
@@ -200,6 +253,8 @@ export function processTask(creep: Creep, taskId: TaskId): TaskState {
     debug("[kernel] [" + creep.name + "] is about to " + step.type);
 
     const result : TaskStepResult = Creeps.processTaskStep(creep, step, memory);
+    memory.lastStep = step;
+    memory.lastResult = result;
 
     // more state handling if finished, blocked, error
     if (!result.success) {

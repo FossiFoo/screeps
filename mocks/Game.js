@@ -94,11 +94,12 @@ const map : GameMap = new GameMap();
 const market : Market = new Market();
 
 class TestCreep extends Creep {
-    constructor(name, room) {
+    constructor(name: string, room: Room) {
         super();
         this.name = name;
         this.room = room;
         this.memory = {};
+        this.pos = new RoomPosition(1, 2, room.name);
         this.carry = {
             RESOURCE_ENERGY: 0
         }

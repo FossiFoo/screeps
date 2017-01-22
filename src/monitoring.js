@@ -4,9 +4,8 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { ErrorEntry } from "../types/FooTypes.js";
+import type { ErrorEntry, FooMemory, MonitoringMemory } from "../types/FooTypes.js";
 
-import Game from "./ApiGame";
 import Memory from "./ApiMemory";
 
 import * as Config from "./config";
@@ -15,8 +14,10 @@ export let DEBUG_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_DEBUG)
 export let INFO_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_INFO) === undefined ? true : (Config.LOG_LEVEL >= Config.LOG_LEVEL_INFO);
 export let WARN_ENABLED: boolean = (Config.LOG_LEVEL >= Config.LOG_LEVEL_WARN) === undefined ? true : (Config.LOG_LEVEL >= Config.LOG_LEVEL_WARN);
 
+let mem : MonitoringMemory;
 
-export function init(): void {
+export function init(Game: GameI, memory: FooMemory): void {
+    mem = memory.monitoring;
 }
 
 export function consoleLog(...args: any[]): void {
@@ -30,7 +31,7 @@ export function makeMsg(...args: any[]): string {
 }
 
 export function makeLogMsg(level: string, ...args: any[]): string {
-    return "[" + level + "] " + makeMsg(args);
+    return "[" + Game.time +"] [" + level + "] " + makeMsg(args);
 }
 
 export function error(...args: any[]): void {
@@ -40,8 +41,8 @@ export function error(...args: any[]): void {
         type: "GENERAL",
         msg: msg
     }
-    Memory.monitoring.errors.push(err);
-    consoleLog("[ERROR] " + msg);
+    mem.errors.push(err);
+    consoleLog("[" + Game.time + "] [ERROR] " + msg);
     Game.notify(msg, 10);
 }
 

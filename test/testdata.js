@@ -3,14 +3,16 @@
 import type { Task, TaskMeta, TaskHolder,
               TaskStepNavigate,
               StatsMemory, OwnMemory, MonitoringMemory, GCLStats, CPUStats,
-              KernelMemory, PlannerMemory, MilestoneMemory,
+              KernelMemory, PlannerMemory, MilestoneMemory, TaskMemory,
               PlanningRoomData,
               CreepBodyDefinitionByType,
               ProvisionTask, SourceTarget, EnergyTargetSpawn, EnergyTarget,
               UpgradeTask, EnergyTargetController,
+              TaskStepResult, TaskStep,
               TaskBuild, EnergyTargetConstruction } from "../types/FooTypes.js";
 
-import { TaskPriorities, TaskTypes, TaskStates, SourceTargets, EnergyTargetTypes } from "../src/consts.js";
+import { TaskPriorities, TaskTypes, TaskStates, SourceTargets, EnergyTargetTypes,
+         TaskStepTypes } from "../src/consts.js";
 
 const validRoomName : RoomName = "N0W0";
 const otherRoomName : RoomName = "N1W1";
@@ -75,7 +77,8 @@ const validTask : ProvisionTask = {
     target: validTarget,
     created: 0,
     updated: 0,
-    prio: TaskPriorities.MAX
+    prio: TaskPriorities.MAX,
+    spawn: "variable"
 };
 
 const validUpgrade : UpgradeTask = {
@@ -85,7 +88,8 @@ const validUpgrade : UpgradeTask = {
     target: validController,
     created: 0,
     updated: 0,
-    prio: TaskPriorities.MAX
+    prio: TaskPriorities.MAX,
+    spawn: "variable"
 }
 
 const validBuild : TaskBuild = {
@@ -95,7 +99,8 @@ const validBuild : TaskBuild = {
     target: validConstruction,
     created: 0,
     updated: 0,
-    prio: TaskPriorities.MAX
+    prio: TaskPriorities.MAX,
+    spawn: "variable"
 }
 
 const validMeta : TaskMeta = {
@@ -152,7 +157,7 @@ const validRoomData : PlanningRoomData = {
               "Source2": {id: "Source2", capacity: 9000},
               "Source3": {id: "Source3", capacity: 1}},
     paths: {
-        base: {}
+        base: {"Source1": {length: 10}, "Source2": {length: 1000}}
     }
 };
 
@@ -243,6 +248,12 @@ const validMemory: OwnMemory = {
     milestones: validMilestones
 };
 
-export const Memorys = {
-    valid: validMemory
+const validTaskMemory: TaskMemory = {
+    lastStep: ({type: TaskStepTypes.NOOP, init: true, final: false}: TaskStep),
+    lastResult: ({}: TaskStepResult)
+}
+
+export const Memories = {
+    valid: validMemory,
+    validTaskMemory
 }

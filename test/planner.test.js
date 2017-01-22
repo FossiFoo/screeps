@@ -40,7 +40,7 @@ it('should create provision task for spawn in bootup', function() {
     ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([{id: "test-extension-1"}]);
 
     const room : Room = Game.rooms["N0W0"];
-    dut.bootup(Kernel, room, Game);
+    dut.bootup(Kernel, room, Game, true);
 
     expect(Tasks.constructProvisioning).toBeCalled();
     expect(Kernel.addTask).toBeCalled();
@@ -57,7 +57,7 @@ it('should create provision task for extension in bootup', function() {
     ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([mockExtension]);
 
     const room : Room = Game.rooms["N0W0"];
-    dut.bootup(Kernel, room, Game);
+    dut.bootup(Kernel, room, Game, true);
 
     expect(Tasks.constructProvisioning).toBeCalled();
     expect(Kernel.addTask).toBeCalled();
@@ -75,7 +75,7 @@ it('should create provision task for spawn in bootup if ex ful, but spawn isnt',
     ((Rooms.getExtensions: any): JestMockFn).mockReturnValue([mockExtension]);
 
     const room : Room = Game.rooms["N0W0"];
-    dut.bootup(Kernel, room, Game);
+    dut.bootup(Kernel, room, Game, true);
 
     expect(Tasks.constructProvisioning).toBeCalled();
     expect(Kernel.addTask).toBeCalled();
@@ -85,7 +85,7 @@ it('should not create task if too many already in bootup', function() {
     ((Kernel.getLocalCount: any): JestMockFn).mockReturnValue(3);
     const room : Room = Game.rooms["N0W0"];
 
-    dut.bootup(Kernel, room, Game);
+    dut.bootup(Kernel, room, Game, true);
 
     expect(Tasks.constructProvisioning).not.toBeCalled();
     expect(Kernel.addTask).not.toBeCalled();
@@ -104,7 +104,7 @@ it('should upgrade the controller', function() {
 });
 
 it('should not upgrade the controller if too many tasks', function() {
-    ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(3);
+    ((Kernel.getLocalCountForState: any): JestMockFn).mockReturnValue(5);
     const room : Room = Game.rooms["N0W0"];
     dut.upgradeController(Kernel, room, Testdata.Planner.validRoomData, {rooms: {}});
 
@@ -172,7 +172,7 @@ it('should get planning data for a room', function() {
 
     expect(data).toMatchObject({name: "N0W0",
                                 energyPotential: 9001,
-                                paths: {base: {"Source1": 1, "Source2": 1}},
+                                paths: {base: {"Source1": {length: 1}, "Source2": {length: 1}}},
                                 sources: {"Source1": {id: "Source1", capacity: 9000},
                                           "Source2": {id: "Source2", capacity: 1}}});
 });

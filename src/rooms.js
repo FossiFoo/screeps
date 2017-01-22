@@ -4,7 +4,53 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { Position } from "../types/FooTypes.js";
+import type { Position, RoomMemory, TerrainUsageMatrix, TerrainUsageCell } from "../types/FooTypes.js";
+
+import { ROOM_MEMORY_VERSION } from "./consts";
+
+export function memory(room: Room): RoomMemory {
+    if (room.memory.version === ROOM_MEMORY_VERSION) {
+        return (room.memory: RoomMemory);
+    }
+    const initRoom: RoomMemory = {
+        version: ROOM_MEMORY_VERSION,
+        usage: {
+            terrain: []
+        }
+    }
+    _.defaultsDeep(room.memory, initRoom);
+    room.memory.version = ROOM_MEMORY_VERSION;
+    return (room.memory: RoomMemory);
+}
+
+export function incrementTerrainUsage(room: Room, x: XCoordinate, y: YCoordinate): void {
+    const mem : RoomMemory = memory(room);
+    const terrain : TerrainUsageMatrix = mem.usage.terrain;
+    if (!terrain[x]) {
+        terrain[x] = [];
+    }
+    if (!terrain[x][y]) {
+        terrain[x][y] = {
+            x,
+            y,
+            count: 0
+        }
+    }
+    const cell : TerrainUsageCell = terrain[x][y];
+    if (cell) {
+        cell.count = cell.count + 1;
+    }
+}
+
+export function getTerrainUsage(room: Room): TerrainUsageMatrix {
+    const mem : RoomMemory = memory(room);
+    return mem.usage.terrain;
+}
+
+export function clearTerrainUsage(room: Room): void {
+    const mem : RoomMemory = memory(room);
+    mem.usage.terrain = [];
+}
 
 export function getSpawns(room: Room): Spawn[] {
     return room.find(FIND_MY_SPAWNS);
@@ -26,7 +72,11 @@ export function getSources(room: Room): Source[] {
     // ignore SK lair sources for usual operations
     const allSources : Source[] = room.find(FIND_SOURCES);
     const sources = _.filter(allSources, (s: Source): boolean => {
-        const structures = room.lookForAtArea(LOOK_STRUCTURES, s.pos.y - 3, s.pos.x -3, s.pos.y + 3, s.pos.x + 3, true);
+        const top : number = Math.max(0, s.pos.y - 3);
+        const left : number = Math.max(0, s.pos.x - 3);
+        const bottom : number = Math.min(50, s.pos.y + 3);
+        const right : number = Math.min(50, s.pos.x + 3);
+        const structures = room.lookForAtArea(LOOK_STRUCTURES, top, left, bottom, right, true);
         return !_.some(structures, (f) => f && f.structure && f.structure.structureType === STRUCTURE_KEEPER_LAIR);
     });
     return sources;

@@ -36,6 +36,7 @@ it('should log to console', function() {
 });
 
 it('should record errors', function() {
+    dut.init(Game, Memory);
     testLogs(dut.error);
     expect(_.size(Memory.monitoring.errors)).toBe(1);
 });
@@ -70,5 +71,5 @@ it('should record debugs if enabled', function() {
 
 it('should record make a string', function() {
     const msg : string = dut.makeLogMsg("TEST", "foo");
-    expect(msg).toEqual("[TEST] foo");
+    expect(msg).toEqual("[0] [TEST] foo");
 });

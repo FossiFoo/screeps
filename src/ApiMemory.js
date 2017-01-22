@@ -6,6 +6,7 @@ declare var _ : Lodash;
 
 import type { Tick, FooMemory, OwnMemory } from "../types/FooTypes.js";
 
+
 export function initializeMemory(mem: any | FooMemory, now: Tick): FooMemory {
 
     if (mem && mem.initialized === true) {

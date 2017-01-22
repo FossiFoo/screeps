@@ -415,8 +415,8 @@ declare module 'lodash' {
     lowerCase(string?: string): string;
     lowerFirst(string?: string): string;
     pad(string?: string, length?: number, chars?: string): string;
-    padEnd(string?: string, length?: number, chars?: string): string;
-    padStart(string?: string, length?: number, chars?: string): string;
+    padRight(string?: string, length?: number, chars?: string): string;
+    padLeft(string?: string, length?: number, chars?: string): string;
     parseInt(string: string, radix?: number): number;
     repeat(string?: string, n?: number): string;
     replace(string?: string, pattern: RegExp|string, replacement: ((string: string) => string)|string): string;

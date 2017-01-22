@@ -6,8 +6,10 @@ declare var _ : Lodash;
 
 import type { Tick, TaskPrio, Task, TaskStepType, TaskState,
               SourceTarget, EnergyTarget, ProvisionTask, SourceId,
+              TaskEnergyTransmission,
               UpgradeTask, EnergyTargetController,
               TaskBuild, EnergyTargetConstruction,
+              TaskMine,
               TaskStep, TaskStepNavigate, TaskStepHarvest, TaskStepTransfer, TaskStepUpgrade,
               TaskMemory,
               Position } from "../types/FooTypes.js";
@@ -30,7 +32,8 @@ export function constructProvisioning(now: Tick, prio: TaskPrio, source: SourceT
         target,
         created: now,
         updated: now,
-        prio
+        prio,
+        spawn: "variable"
     };
 }
 
@@ -42,7 +45,8 @@ export function constructUpgrade(now: Tick, prio: TaskPrio, source: SourceTarget
         target,
         created: now,
         updated: now,
-        prio
+        prio,
+        spawn: "variable"
     }
 }
 
@@ -54,11 +58,25 @@ export function constructBuild(now: Tick, prio: TaskPrio, source: SourceTarget, 
         target,
         created: now,
         updated: now,
-        prio
+        prio,
+        spawn: "variable"
     }
 }
 
-export function findNavigationTargetById(id: ObjectId): ?Position {
+export function constructMine(now: Tick, prio: TaskPrio, spawnTime: Tick, source: SourceTarget, targetRoom: RoomName): TaskMine {
+    return {
+        type: TaskTypes.MINE,
+        assignedRoom: targetRoom,
+        source,
+        created: now,
+        updated: now,
+        prio,
+        spawn: "timed",
+        spawnTime
+    }
+}
+
+export function findNavigationTargetById(id: ObjectId): ?RoomPosition {
     const obj : ?RoomObject = Game.getObjectById(id);
     if (!obj) {
         warn("[tasks] can not see object " + id);
@@ -69,28 +87,29 @@ export function findNavigationTargetById(id: ObjectId): ?Position {
     return sourcePosition;
 }
 
-export function findClosestNavigationTargetByType(targetType: ScreepsConstantFind, pos: RoomPosition): ?Position {
+export function findClosestNavigationTargetByType(targetType: ScreepsConstantFind, pos: RoomPosition): ?RoomPosition {
     const obj : ?RoomObject = pos.findClosestByPath(targetType);
     if (!obj) {
         error("[tasks] can not find a source in " + pos.roomName);
-        return {x:25, y:25};
-    } else {
-        const sourcePosition : RoomPosition = obj.pos;
-        debug("[tasks] found a source at " + sourcePosition.toString());
-        return sourcePosition;
+        return new RoomPosition(25, 25, pos.roomName);
     }
+
+    const sourcePosition : RoomPosition = obj.pos;
+    debug("[tasks] found a source at " + sourcePosition.toString());
+    return sourcePosition;
 }
 
 export function constructStep(type: TaskStepType, stepData: Object, defaults: Object): TaskStep {
     return _.assign({ type }, stepData, defaults);
 }
 
-export function constructMoveStep(position: Position, roomName: RoomName, defaults: Object): TaskStep {
+export function constructMoveStep(position: Position, roomName: RoomName, ignoreCreeps: boolean, defaults: Object): TaskStep {
     return constructStep(TaskStepTypes.NAVIGATE, defaults, {
         destination: {
             room: roomName,
             position
-        }
+        },
+        ignoreCreeps
     });
 }
 
@@ -118,7 +137,13 @@ export function constructStepBuild(targetId: ObjectId, defaults: Object): TaskSt
     });
 }
 
-export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): ?Position {
+export function constructPickupStep(resourceId: ResourceId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.PICKUP, defaults, {
+        resourceId
+    });
+}
+
+export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): ?RoomPosition {
     if (source.type === SourceTargets.FIXED) {
         const sourceId : SourceId = source.id;
         return findNavigationTargetById(sourceId);
@@ -128,7 +153,7 @@ export function findNearestSourceTarget(currentPosition: RoomPosition, source: S
         return findClosestNavigationTargetByType(FIND_SOURCES_ACTIVE, currentPosition);
     } else {
         //not in correct room yet
-        return {x:25, y:25};
+        return new RoomPosition(25, 25, source.room);
     }
 }
 
@@ -136,33 +161,103 @@ export function getSourceIdForTarget(source: SourceTarget, currentPosition: Room
     if (source.type === SourceTargets.FIXED) {
         return source.id;
     }
-    const sources: Source[] = currentPosition.findInRange(FIND_SOURCES, 1);
+    const sources: Source[] = currentPosition.findInRange(FIND_SOURCES, 2);
     const sourceObject : ?Source = _.head(sources);
     return sourceObject && sourceObject.id;
 }
 
-export function aquireEnergy(source: SourceTarget, currentPosition: RoomPosition, init: boolean): TaskStep {
-    const sourcePosition : ?Position = findNearestSourceTarget(currentPosition, source);
-    if (!sourcePosition) {
-        return constructStep("NOOP", {}, {final: true, init});
+type AquireEnergyFunc = (sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory) => TaskStep;
+
+export function mineStep(task: TaskMine, creep: Creep, init: boolean, memory: TaskMemory) {
+    const source : SourceTarget = task.source;
+    const currentPosition : RoomPosition = creep.pos;
+    const f : AquireEnergyFunc = (sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory) => {
+        const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
+        if (!adjacent) {
+            const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
+                                          !memory.lastResult.success)
+            if (moveFailed) {
+                warn(`[tasks] [mine] [$creep.name] moving failed, sidestepping`);
+            }
+            return constructMoveStep(sourcePosition, sourcePosition.roomName, !moveFailed, {init, final: false});
+        }
+        return constructHarvestSourceStep(sourceId, {init, final: false});
+    }
+    return withPositionAtSource(source, currentPosition, init, memory, f);
+}
+
+export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory): TaskStep {
+
+    const resources : Resource[] = currentPosition.findInRange(FIND_DROPPED_RESOURCES, 3);
+    const energy : Resource = _.find(resources, (r: Resource): boolean => r.resourceType === RESOURCE_ENERGY);
+    if (energy) {
+        const adjacent : boolean = currentPosition.inRangeTo(energy.pos, 1);
+        if (!adjacent) {
+            const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
+                                          !memory.lastResult.success)
+            if (moveFailed) {
+                warn(`[tasks] [aquire] [$creep.name] moving failed, sidestepping`);
+            }
+            return constructMoveStep(energy.pos, energy.pos.roomName, !moveFailed, {init, final: false});
+        }
+        return constructPickupStep(energy.id, {init, final: false});
     }
 
-    const adjacent : boolean = currentPosition.isNearTo(sourcePosition.x, sourcePosition.y);
+    //check container
+    /* const energyPosition : Position = currentPosition.findInRange(FIND_MY_STRUCTURES, 1, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);*/
+
+
+    const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
     if (!adjacent) {
-        return constructMoveStep(sourcePosition, source.room, {init, final: false});
-    }
-    const sourceId : ?SourceId = getSourceIdForTarget(source, currentPosition);
-    if (!sourceId) {
-        return constructStep("NOOP", {}, {final: true, init});
+        const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
+                                      !memory.lastResult.success)
+        if (moveFailed) {
+            warn(`[tasks] [aquire] [$creep.name] moving failed, sidestepping`);
+        }
+        return constructMoveStep(sourcePosition, sourcePosition.roomName, moveFailed, {init, final: false});
     }
     return constructHarvestSourceStep(sourceId, {init, final: false});
 }
 
+
+export function withPositionAtSource(source: SourceTarget, currentPosition: RoomPosition, init: boolean, memory: TaskMemory, f: AquireEnergyFunc): TaskStep {
+    const sourcePosition : ?RoomPosition = findNearestSourceTarget(currentPosition, source);
+    if (!sourcePosition) {
+        warn(`[tasks] [aquire] source ${source.room} ${source.type} not found`);
+        return constructStep("NOOP", {}, {final: true, init});
+    }
+
+    const resources : Resource[] = currentPosition.findInRange(FIND_DROPPED_RESOURCES, 3);
+    const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 2);
+    if (!adjacent) {
+        const moveFailed : boolean = (memory.lastStep && memory.lastStep.type === TaskStepTypes.NAVIGATE &&
+                                      memory.lastResult && !memory.lastResult.success)
+        if (moveFailed) {
+            warn(`[tasks] [aquire] [$creep.name] moving failed, sidestepping`);
+        }
+        return constructMoveStep(sourcePosition, source.room, !moveFailed, {init, final: false});
+    }
+
+    const sourceId : ?SourceId = getSourceIdForTarget(source, currentPosition);
+    if (!sourceId) {
+        warn(`[tasks] ${source.room} ${source.type} id not found`);
+        return constructStep("NOOP", {}, {final: true, init});
+    }
+
+    return f(sourceId, sourcePosition, currentPosition, init, memory);
+}
+
+
+export function aquireEnergy(source: SourceTarget, currentPosition: RoomPosition, init: boolean, memory: TaskMemory): TaskStep {
+    return withPositionAtSource(source, currentPosition, init, memory, aquireEnergyFromSource);
+}
+
 export function energyTransmission(
-    task: Task,
+    task: TaskEnergyTransmission,
     creep: Creep,
     init: boolean,
     memory: any,
+    distance: number,
     transmissionStep: (taskTarget: EnergyTarget, final: boolean) => TaskStep): TaskStep {
 
     const carryAmount : number = creep.carry.energy || 0; //FIXME mixed loads
@@ -184,38 +279,40 @@ export function energyTransmission(
         if (carryAmount === 0) {
             return constructStep("NOOP", {}, {final: true, init});
         }
-        const targetPosition : ?Position = findNavigationTargetById(taskTarget.targetId);
+        const targetPosition : ?RoomPosition = findNavigationTargetById(taskTarget.targetId);
         if (!targetPosition) {
+            warn(`[tasks] [transmit] ${taskTarget.room} ${taskTarget.targetId} not found`);
             return constructStep("NOOP", {}, {final: true, init});
         }
 
-        const adjacent : boolean = currentPosition.isNearTo(targetPosition.x, targetPosition.y);
+        const adjacent : boolean = currentPosition.inRangeTo(targetPosition, distance);
         if (adjacent) {
             return transmissionStep(taskTarget, false);
         }
 
-        return constructMoveStep(targetPosition, taskTarget.room, {init, final: false});
+        return constructMoveStep(targetPosition, taskTarget.room, false, {init, final: false});
     }
 
     const source : SourceTarget = task.source;
-    return aquireEnergy(source, currentPosition, init);
+    return aquireEnergy(source, currentPosition, init, memory);
 }
 
 
+
 export function provisioningStep(task: ProvisionTask, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
-    return energyTransmission(task, creep, init, memory, (taskTarget: EnergyTarget, final: boolean) => {
+    return energyTransmission(task, creep, init, memory, 1, (taskTarget: EnergyTarget, final: boolean) => {
         return constructStepTransfer(taskTarget.targetId, {final, init});
     });
 }
 
 export function upgradeStep(task: UpgradeTask, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
-    return energyTransmission(task, creep, init, memory, (taskTarget: EnergyTarget, final: boolean) => {
+    return energyTransmission(task, creep, init, memory, 3, (taskTarget: EnergyTarget, final: boolean) => {
         return constructStepUpgrade(taskTarget.targetId, {final, init});
     });
 }
 
 export function buildStep(task: TaskBuild, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
-    return energyTransmission(task, creep, init, memory, (taskTarget: EnergyTarget, final: boolean) => {
+    return energyTransmission(task, creep, init, memory, 1, (taskTarget: EnergyTarget, final: boolean) => {
         return constructStepBuild(taskTarget.targetId, {final, init});
     });
 }
@@ -230,6 +327,9 @@ export function getNextStep(task: Task, creep: Creep, state: TaskState, memory: 
     }
     if (task.type === TaskTypes.BUILD) {
         return buildStep(task, creep, init, memory);
+    }
+    if (task.type === TaskTypes.MINE) {
+        return mineStep(task, creep, init, memory);
     }
     warn("[tasks] [" + creep.name+ "] unknown task type " + task.type);
     return constructStep("NOOP", {}, {final: true, init});

@@ -4,7 +4,7 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { PlanningRoomData } from "../types/FooTypes.js";
+import type { PlanningRoomData, TerrainUsageMatrix, TerrainUsageCell } from "../types/FooTypes.js";
 
 import { error, warn, info, debug } from "./monitoring";
 
@@ -16,7 +16,10 @@ import * as Tasks from "./tasks";
 // Game
 import * as Rooms from "./rooms";
 
-export function constructExtension(room: Room, base: RoomPosition, current: number, missing: number) {
+const CONSTRUCTION_ROAD_FREQUENCY : number = 100;
+const CONSTRUCTION_ROAD_PERCENTAGE : number = 5;
+
+export function constructExtension(room: Room, base: RoomPosition, current: number, missing: number): void {
     for (var i = current + 1; i <= current + missing; i++) {
         const y : number = base.y + 2 + Math.floor((i - 1) / 6);
         const x : number = base.x - ((i - 1) % 6) * 2 - (y % 2);
@@ -28,6 +31,35 @@ export function constructExtension(room: Room, base: RoomPosition, current: numb
     }
 }
 
+export function constructRoadCell(room: Room, cell: TerrainUsageCell) {
+    const things : LookAtResult[] = room.lookAt(cell.x, cell.y);
+    const hasConstructionSites : boolean = _.some(things, (l) => l.type === LOOK_CONSTRUCTION_SITES);
+    if (things.constructionSite) {
+        return;
+    }
+    const structureResults : LookAtResult[] = _.filter(things, (l) => l.type === LOOK_STRUCTURES);
+    const structures = _.map(structureResults, (s) => s.structure);
+    if (structures && _.some(structures, (s) => s && s.structureType === STRUCTURE_ROAD)) {
+        return;
+    }
+    debug(cell.x + "/" + cell.y + ": building road " + cell.count);
+    room.createConstructionSite(cell.x, cell.y, STRUCTURE_ROAD);
+}
+
+export function constructRoads(room: Room): void {
+    const usage : TerrainUsageMatrix = Rooms.getTerrainUsage(room);
+    usage.forEach((row) => {
+        if (row) {
+            row.forEach((cell) => {
+                if (cell && cell.count > CONSTRUCTION_ROAD_FREQUENCY / CONSTRUCTION_ROAD_PERCENTAGE) {
+                    constructRoadCell(room, cell);
+                }
+            });
+        }
+    });
+    Rooms.clearTerrainUsage(room);
+}
+
 export function getBaseArea(room: Room, base: RoomPosition): LookAtResultMatrix {
     if ( base.x > 13 && base.y + 13 < 50 ) {
         const area : LookAtResultMatrix = (room.lookAtArea(base.y, base.x - 13, base.y + 13, base.x, false): any);
@@ -37,7 +69,7 @@ export function getBaseArea(room: Room, base: RoomPosition): LookAtResultMatrix 
     return (room.lookAtArea(base.y, base.x - 13, base.y + 13, base.x, false): any);
 }
 
-export function constructBase(room: Room, data: PlanningRoomData) {
+export function constructBase(room: Room, data: PlanningRoomData, bootup: boolean) {
     const base: RoomPosition = Rooms.getBase(room);
     const area: LookAtResultMatrix = getBaseArea(room, base);
 
@@ -54,6 +86,12 @@ export function constructBase(room: Room, data: PlanningRoomData) {
     const missingExtensions : number = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][rcl] - (extensionCount + extensionSiteCount);
     if (missingExtensions > 0) {
         constructExtension(room, base, extensionCount + extensionSiteCount, missingExtensions);
+    }
+    if (!bootup && Game.time % CONSTRUCTION_ROAD_FREQUENCY === 0) {
+        constructRoads(room);
+    }
+    if (bootup) {
+        Rooms.clearTerrainUsage(room);
     }
     const towerCount : number = _.size(Rooms.getTowers(room));
 }

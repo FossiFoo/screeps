@@ -4,7 +4,7 @@
 import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
-import type { FooMemory, PlannerMemory,
+import type { Tick, FooMemory, PlannerMemory,
               PlanningRoomData, PlanningEnergyDistribution, PlanningRoomDistribution,
               PlanningSourceDistribution, PlanningSourceData,
               PathMap, PathData,
@@ -26,6 +26,11 @@ import * as Rooms from "./rooms";
 import * as BodyShop from "./bodyshop";
 import * as Architect from "./architect";
 
+type PathForSource = {
+    id: SourceId,
+    length: number
+};
+
 export let memory: PlannerMemory;
 
 export function init(game: GameI, mem: FooMemory): void {
@@ -36,7 +41,8 @@ export function convertSourceDataToDistribution(s: PlanningSourceData): Planning
     return {
         id: s.id,
         totalCapacity: s.capacity,
-        totalUse: 0
+        totalUse: 0,
+        minerAssigned: null
     };
 };
 
@@ -52,6 +58,19 @@ export function initializeDistributionFromData(data: PlanningRoomData): Planning
     return initialDistribution;
 }
 
+export function getDistributionForRoom(roomName: RoomName, distribution: PlanningEnergyDistribution, data: PlanningRoomData): PlanningRoomDistribution {
+    let roomDistribution : ?PlanningRoomDistribution = distribution.rooms[roomName];
+
+    if (roomDistribution) {
+        return roomDistribution;
+    }
+
+    const initialDistribution : PlanningRoomDistribution = initializeDistributionFromData(data);
+    distribution.rooms[roomName] = initialDistribution; //FIXME write to memory? => should be mutable for now
+
+    return initialDistribution;
+}
+
 export function determineSource(room: Room,
                                 data: PlanningRoomData,
                                 distribution: PlanningEnergyDistribution,
@@ -59,13 +78,7 @@ export function determineSource(room: Room,
                                 prio: TaskPrio,
                                 taskType: TaskType): SourceTarget {
 
-    let roomDistribution : ?PlanningRoomDistribution = distribution.rooms[room.name];
-
-    if (!roomDistribution) {
-        const initialDistribution : PlanningRoomDistribution = initializeDistributionFromData(data);
-        roomDistribution = initialDistribution;
-        distribution.rooms[room.name] = roomDistribution; //FIXME write to memory? => should be mutable for now
-    }
+    const roomDistribution : PlanningRoomDistribution = getDistributionForRoom(room.name, distribution, data);
 
     const maxCarry : ?number = BodyShop.calculateMaximumCarry(taskType, room.energyCapacityAvailable);
     const maxNeed : number = maxCarry ? Math.min(maxCarry, amount) :  amount;
@@ -76,10 +89,14 @@ export function determineSource(room: Room,
         const availableEnergy : EnergyUnit = s.totalCapacity - s.totalUse;
             return availableEnergy >= maxNeed;
     });
-    const sortedSources = _.sortBy(possibleSources, (s: PlanningSourceDistribution): EnergyUnit => {
-        const pathToSource : ?PathData = data.paths.base[s.id];
-        return pathToSource ? pathToSource.length : 1000;
-    });
+    const sortedSources : PlanningSourceDistribution[] =
+        _.sortBy(possibleSources, (s: PlanningSourceDistribution): EnergyUnit => {
+            const pathToSource : ?PathData = data.paths.base[s.id];
+            const pathLength : number = pathToSource ? pathToSource.length : 1000; //(1 - 1000)
+            const capacityLeft : number = s.totalCapacity - s.totalUse; //(0 - 3000)
+            const sourceValue : number = capacityLeft / pathLength;
+            return sourceValue;
+        });
 
     if (_.isEmpty(sortedSources)) {
         //FIXME make this saner
@@ -93,12 +110,14 @@ export function determineSource(room: Room,
 
     let sourceId : SourceId;
     if (prio >= TaskPriorities.UPKEEP) {
-        sourceId = _.head(sortedSources).id;
-    } else if (prio <= TaskPriorities.IDLE) {
         sourceId = _.last(sortedSources).id;
+        debug("picking near for: " + prio + " " + taskType);
+    } else if (prio <= TaskPriorities.IDLE) {
+        sourceId = _.head(sortedSources).id;
+        debug("picking far for: " + prio + " " + taskType);
     } else {
         sourceId = _.sample(sortedSources).id;
-        console.log("picked by chance: " + sourceId)
+        debug("random source: " + sourceId);
     }
 
     //FIXME write to memory? => should be mutable for now
@@ -143,91 +162,231 @@ export function  constructTargetSpawn(roomName: RoomName, spawn: Spawn): EnergyT
     };
 };
 
-export function bootup(Kernel: KernelType, room: Room, Game: GameI): void {
+export function findRefillSpawnTarget(room: Room, extensions: Extension[]): ?EnergyTarget {
+    const spawns : Spawn[] = Rooms.getSpawns(room);
+    if (!spawns) {
+        warn("[planner] [" + room.name + "] has no spawn");
+        return null;
+    }
+
+    // use first non-full spawn
+    const emptySpawns : Spawn[] = _.filter(spawns, (spawn: Spawn) => {
+        return spawn.energy < spawn.energyCapacity * 0.5;
+    });
+    const spawn : ?Spawn = emptySpawns[0];
+
+    let target : ?EnergyTarget;
+    if (spawn) {
+        target = constructTargetSpawn(room.name, spawn);
+    } else {
+        const extensionsSorted : Extension[] = _.sortBy(extensions, (e: Extension) => e.energy);
+        const extension : ?Extension = _.head(extensionsSorted);
+        if (extension && extension.energy < extension.energyCapacity) {
+            const capacity : number = EXTENSION_ENERGY_CAPACITY[room.controller.level];
+            const extensionTarget : EnergyTargetSpawn = {
+                room: room.name,
+                type: EnergyTargetTypes.SPAWN,
+                name: extension.id,
+                targetId: extension.id,
+                energyNeed: capacity
+            }
+            target = extensionTarget;
+        }
+    }
+    if (!target) {
+        const anySpawn : Spawn = spawns[0];
+        if (anySpawn && anySpawn.energy < anySpawn.energyCapacity) {
+            target = constructTargetSpawn(room.name, anySpawn);
+        }
+    }
+    return target;
+}
+
+export function bootup(Kernel: KernelType, room: Room, Game: GameI, bootup: boolean): void {
+    if (!bootup) {
+        debug("[planner] [" + room.name + "] normal mode - skip bootup");
+        return;
+    }
+    warn("[planner] [" + room.name + "] bootup mode active");
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.PROVISION &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING);
+    });
+
+    const extensions : Extension[] = Rooms.getExtensions(room);
+    if (openTaskCount > (_.size(extensions) / 2) ) {
+        debug("[planner] [" + room.name + "] [bootup] has too many pending jobs");
+        return;
+    }
+
+    const target : ?EnergyTarget = findRefillSpawnTarget(room, extensions);
+    if (!target) {
+        debug(`[planner] [bootup] all spawns and extensions full`);
+        return;
+    }
+
+    let prio : TaskPrio = TaskPriorities.UPKEEP;
+    const topup : boolean = target.energyNeed < SPAWN_ENERGY_CAPACITY /2;
+    if (target.type === EnergyTargetTypes.SPAWN && topup) {
+            prio = TaskPriorities.UPGRADE;
+    }
+
+    // construct a task to harvest some energy from anywhere and fill a spawn
+
+    const source : SourceTarget = {
+        type: SourceTargets.ANY,
+        room: room.name,
+        energyNeed: target.energyNeed
+    }
+
+    const runningTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.PROVISION &&
+               state === TaskStates.RUNNING;
+    });
+
+    prio = runningTaskCount === 0 ? TaskPriorities.URGENT : prio;
+    const harvest: Task = Tasks.constructProvisioning(Game.time, prio, source, target);
+
+    Kernel.addTask(harvest);
+}
+
+export function calculateSpawnTime(s: PlanningSourceDistribution, paths: {[id: SourceId]: PathForSource}): Tick {
+    const respawnTime : Tick = s.minerAssigned ? (s.minerAssigned + CREEP_LIFE_TIME) : 0;
+    const path : ?PathForSource = paths[s.id];
+    const pathLength : number = path ? path.length : 100;
+    const spawnTime : Tick = respawnTime - 2 * pathLength;
+    return spawnTime;
+}
+
+export function mineSources(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
+
+    const miniscule : boolean = room.energyCapacityAvailable < 300;
+    const creeps : CreepMap = Game.creeps; // FIXME make this room specific
+    const empty : boolean = _.size(creeps) < 4;
+    if ( miniscule || empty ) {
+        debug(`[planner][${room.name}] too small for miners`);
+        return;
+    }
+    /* const deprived : boolean = room.energyAvailable < 450;*/
+    /* const hasHaulers : boolean;*/
+
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.MINE &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING);
+    });
+
+    const roomDistribution : PlanningRoomDistribution = getDistributionForRoom(room.name, distribution, data);
+
+    const paths : {[id: SourceId]: PathForSource} = _.indexBy(_.map(roomDistribution.sources, (s: PlanningSourceDistribution): PathForSource  => {
+        const path : ?PathData = data.paths.base[s.id];
+        return {id: s.id, length: (path && path.length) || 100};
+    }), (p: PathForSource) => p.id);
+
+    const unmined : PlanningSourceDistribution[] =
+        _.filter(roomDistribution.sources, (s: PlanningSourceDistribution): boolean => {
+            const spawnTime : Tick = calculateSpawnTime(s, paths);
+            return Game.time > spawnTime;
+        });
+
+    if (_.isEmpty(unmined)) {
+        debug(`[planner] [${room.name}] all sources have a miner assigned`);
+        return;
+    }
+
+    const sourcesByDistance : PlanningSourceDistribution[] = _.sortBy(unmined, );
+
+    const sourceDistribution : ?PlanningSourceDistribution = _.head(sourcesByDistance);
+    if (!sourceDistribution) {
+        error(`[planner] [${room.name}] no source distribution found`);
+        return;
+    }
+    const sourceId : SourceId = sourceDistribution.id;
+    const source : SourceTarget = {
+        type: SourceTargets.FIXED,
+        id: sourceId,
+        room: room.name,
+        energyNeed: 0
+    }
+    const path : ?PathForSource = paths[sourceId];
+    const pathLength : number = path ? path.length : 100;
+
+    const prio : TaskPrio = TaskPriorities.UPKEEP + 500 - pathLength; // bump mining above other upkeep
+    const spawnTime : Tick = calculateSpawnTime(sourceDistribution, paths);
+
+    info(`[planner] [mine] adding ${sourceId}`);
+
+    //FIXME container/link mine (1C) if enough energy
+    const mine : Task = Tasks.constructMine(Game.time, prio, spawnTime, source, room.name);
+
+    Kernel.addTask(mine);
+    sourceDistribution.minerAssigned = Game.time;
+}
+
+export function isBootupMode(room: Room, Game: GameI): boolean {
     const creeps: CreepMap = Game.creeps; // FIXME make this room specific
     // min workers for a starting room
     const BOOTUP_THRESHOLD : number = 3;
     const roomDied : boolean = _.size(creeps) <= BOOTUP_THRESHOLD;
     const miniscule : boolean = room.energyCapacityAvailable < 550;
-    if ( roomDied || miniscule) {
-        warn("[planner] [" + room.name + "] bootup mode active");
 
-        // FIXME check better
-        const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
-            const state : TaskState = holder.meta.state;
-            return holder.task.type === TaskTypes.PROVISION &&
-                   (state === TaskStates.WAITING || state === TaskStates.RUNNING);
-        });
+    const bootup: boolean = roomDied || miniscule;
 
-        const extensions : Extension[] = Rooms.getExtensions(room);
-        if (openTaskCount > (_.size(extensions) / 2) ) {
-            debug("[planner] [" + room.name + "] [bootup] has too many pending jobs");
-            return;
-        }
-
-        const spawns : Spawn[] = Rooms.getSpawns(room);
-        if (!spawns) {
-            warn("[planner] [" + room.name + "] has no spawn");
-            return;
-        }
-
-        // use first non-full spawn
-        const emptySpawns : Spawn[] = _.filter(spawns, (spawn: Spawn) => {
-            return spawn.energy < spawn.energyCapacity * 0.5;
-        });
-        const spawn : ?Spawn = emptySpawns[0];
-
-        let prio : TaskPrio = TaskPriorities.UPKEEP;
-        let target : ?EnergyTarget;
-        if (spawn) {
-            target = constructTargetSpawn(room.name, spawn);
-        } else {
-            const extensionsSorted : Extension[] = _.sortBy(extensions, (e: Extension) => e.energy);
-            const extension : ?Extension = _.head(extensionsSorted);
-            console.log(JSON.stringify(extension))
-            if (extension && extension.energy < extension.energyCapacity) {
-                const capacity : number = EXTENSION_ENERGY_CAPACITY[room.controller.level];
-                const extensionTarget : EnergyTargetSpawn = {
-                    room: room.name,
-                    type: EnergyTargetTypes.SPAWN,
-                    name: extension.id,
-                    targetId: extension.id,
-                    energyNeed: capacity
-                }
-                target = extensionTarget;
-            }
-        }
-        if (!target) {
-            const anySpawn : Spawn = spawns[0];
-            if (anySpawn && anySpawn.energy < anySpawn.energyCapacity) {
-                target = constructTargetSpawn(room.name, anySpawn);
-                prio = TaskPriorities.UPGRADE;
-            }
-        }
-        if (!target) {
-            debug(`[planner] [bootup] all spawns and extensions full`);
-            return;
-        }
-
-        // construct a task to harvest some energy from anywhere and fill a spawn
-
-        const source : SourceTarget = {
-            type: SourceTargets.ANY,
-            room: room.name,
-            energyNeed: target.energyNeed
-        }
-
-        const runningTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
-            const state : TaskState = holder.meta.state;
-            return holder.task.type === TaskTypes.PROVISION &&
-                   state === TaskStates.RUNNING;
-        });
-
-        prio = runningTaskCount === 0 ? TaskPriorities.URGENT : prio;
-        const harvest: Task = Tasks.constructProvisioning(Game.time, prio, source, target);
-
-        Kernel.addTask(harvest);
+    if ( bootup ) {
+        warn(`[planner] [${room.name}] still in bootup - died: ${(roomDied: any)} miniscule: ${(miniscule: any)}`);
+    } else {
+        warn(`[planner] [${room.name}] normal operation`);
     }
+
+    return bootup;
+}
+
+export function refillSpawn(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution, bootup: boolean): void {
+
+    if (bootup) {
+        return;
+    }
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.PROVISION &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING);
+    });
+
+    const extensions : Extension[] = Rooms.getExtensions(room);
+    if (openTaskCount > Math.ceil(_.size(extensions) / 10)) {
+        debug("[planner] [" + room.name + "] [refill] has enough pending refill jobs");
+        return;
+    }
+
+    const target : ?EnergyTarget = findRefillSpawnTarget(room, extensions);
+    if (!target) {
+        debug(`[planner] [refill] all spawns and extensions full`);
+        return;
+    }
+
+    let prio : TaskPrio = TaskPriorities.UPKEEP;
+
+    const source : SourceTarget = determineSource(room, data, distribution, target.energyNeed, prio, TaskTypes.UPGRADE);
+
+    const runningTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.PROVISION &&
+               state === TaskStates.RUNNING;
+    });
+
+    prio = runningTaskCount === 0 ? TaskPriorities.URGENT : prio;
+    if (runningTaskCount === 0) {
+        warn(`[planner] [${room.name}] [refill] no provisioning found, adding URGENT task`);
+    }
+    const harvest: Task = Tasks.constructProvisioning(Game.time, prio, source, target);
+
+    Kernel.addTask(harvest);
 }
 
 export function generateLocalPriorityTasks(Kernel: KernelType, room: Room, Game: GameI): void {
@@ -236,20 +395,27 @@ export function generateLocalPriorityTasks(Kernel: KernelType, room: Room, Game:
         return;
     }
 
-    warn(`generating priority tasks for ${room.name}`)
+    warn(`[planner] generating priority tasks for ${room.name}`)
+
+    const data : PlanningRoomData = getRoomData(room);
+    const distribution : PlanningEnergyDistribution = getCurrentEnergyDistribution();
+
+    const bootupMode : boolean = isBootupMode(room, Game);
 
     // === SURVIVAL ===
     // -> no spawn -> rebuild or abandon
     // -> low energy -> organize some energy
-    bootup(Kernel, room, Game);
+    bootup(Kernel, room, Game, bootupMode);
     // -> defence -> fill turret, repair, build defender, all repair
     // -> turret action
 
     // === UPKEEP ===
     // construct tasks
     // - mine source
+    mineSources(Kernel, room, data, distribution);
     // - refill spawn
     // - refill extension
+    refillSpawn(Kernel, room, data, distribution, bootupMode);
     // - refill turret
     // - refill storage
     // - refill container
@@ -259,14 +425,16 @@ export function upgradeController(Kernel: KernelType, room: Room, data: Planning
 
     // FIXME check better if we have too many updates waiting
     const openTaskCount : number = Kernel.getLocalCountForState(room.name, TaskStates.WAITING);
-    if (openTaskCount > 1) {
+    if (openTaskCount > 3) {
         debug(`[planner] [${room.name}] is busy, not adding upgrade`);
         return;
     }
 
     const controller : Controller = room.controller;
-    const prio : TaskPrio = controller.ticksToDowngrade < 1000 ? TaskPriorities.URGENT : TaskPriorities.IDLE;
-    const energy: EnergyUnit = 100; //FIXME
+    const controllerDowngrading : boolean = controller.ticksToDowngrade < 1000;
+    const controllerHigh : boolean = controller.progressTotal - controller.progress < 1000;
+    const prio : TaskPrio = (controllerDowngrading || controllerHigh) ? TaskPriorities.URGENT : TaskPriorities.IDLE;
+    const energy: EnergyUnit = controller.progressTotal - controller.progress; //FIXME
     const source : SourceTarget = determineSource(room, data, distribution, energy, prio, TaskTypes.UPGRADE);
 
     const target : EnergyTargetController = {
@@ -285,7 +453,7 @@ export function buildExtension(Kernel: KernelType, room: Room, data: PlanningRoo
     const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
     const extensions : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_EXTENSION);
     if (_.isEmpty(extensions)) {
-        debug("[planner] no extensions found")
+        debug("[planner] [building] no extensions found")
         return;
     }
     const sortedExtensions = _.sortBy(extensions, (c: ConstructionSite) => c.progressTotal - c.progress);
@@ -298,12 +466,19 @@ export function buildExtension(Kernel: KernelType, room: Room, data: PlanningRoo
                (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
     });
 
-    if (openTaskCount > 5 || openTaskCount > _.size(constructionSites) * 3) {
+    if (openTaskCount > 10 || openTaskCount > _.size(constructionSites) * 3) {
         debug("[planner] [" + room.name + "] [improve] too many pending jobs " + openTaskCount);
         return;
     }
 
-    const prio : TaskPrio = TaskPriorities.UPGRADE;
+    const prioTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.BUILD &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING) &&
+               holder.task.prio === TaskPriorities.UPGRADE;
+    });
+
+    const prio : TaskPrio = prioTaskCount > 5 ? TaskPriorities.IDLE : TaskPriorities.UPGRADE;
     const energyNeed : EnergyUnit = extension.progressTotal - extension.progress;
     const source : SourceTarget = determineSource(room, data, distribution, energyNeed, prio, TaskTypes.BUILD);
 
@@ -324,8 +499,8 @@ export function getRoomData(room: Room): PlanningRoomData {
     const energyPotential : number = _.sum(sources, (s: Source) => s.energyCapacity);
     const base : RoomPosition = Rooms.getBase(room);
     const sourcesById : {[id: SourceId]: Source} = _.indexBy(sources, (s: Source) => s.id);
-    const paths : PathMap = _.mapValues(sourcesById, (s: Source): number => {
-        return Rooms.calculatePathLength(room, base, s.pos);
+    const paths : PathMap = _.mapValues(sourcesById, (s: Source): PathData => {
+        return {length: Rooms.calculatePathLength(room, base, s.pos)};
     });
     const sourceEntriesById: {[id: SourceId]: PlanningSourceData} =
         _.mapValues(sourcesById, (s: Source): PlanningSourceData => {
@@ -347,6 +522,52 @@ export function getCurrentEnergyDistribution(): PlanningEnergyDistribution {
     return memory.energyDistribution;
 }
 
+export function buildRoads(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
+
+    const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
+    const extensions : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_ROAD);
+    if (_.isEmpty(extensions)) {
+        debug("[planner] [building] no extensions found")
+        return;
+    }
+    const sortedExtensions = _.sortBy(extensions, (c: ConstructionSite) => c.progressTotal - c.progress);
+    const extension : ConstructionSite = _.head(sortedExtensions);
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.BUILD &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
+    });
+
+    if (openTaskCount > 10 || openTaskCount > _.size(constructionSites) / 10) {
+        debug("[planner] [" + room.name + "] [improve] too many pending jobs " + openTaskCount);
+        return;
+    }
+
+    const prioTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.BUILD &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING) &&
+               holder.task.prio === TaskPriorities.UPGRADE;
+    });
+
+    const prio : TaskPrio = prioTaskCount > 5 ? TaskPriorities.IDLE : TaskPriorities.UPGRADE;
+    const energyNeed : EnergyUnit = extension.progressTotal - extension.progress;
+    const source : SourceTarget = determineSource(room, data, distribution, energyNeed, prio, TaskTypes.BUILD);
+
+    const site : EnergyTargetConstruction = {
+        room: room.name,
+        type: EnergyTargetTypes.CONSTRUCTION,
+        targetId: extension.id,
+        energyNeed
+    }
+
+    const buildTask : Task = Tasks.constructBuild(Game.time, prio, source, site);
+    Kernel.addTask(buildTask)
+}
+
+
 export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Game: GameI): void {
 
     if (!room.controller.my) {
@@ -360,8 +581,10 @@ export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Ga
     const data : PlanningRoomData = getRoomData(room);
     const distribution : PlanningEnergyDistribution = getCurrentEnergyDistribution();
 
+    const bootupMode : boolean = isBootupMode(room, Game);
+
     // - construction sites
-    Architect.constructBase(room, data);
+    Architect.constructBase(room, data, bootupMode);
 
     // - build extension
     buildExtension(Kernel, room, data, distribution);
@@ -369,6 +592,7 @@ export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Ga
     // - build turret
     // - build storage
     // - build some road
+    buildRoads(Kernel, room, data, distribution);
     // - build some wall
     // - upgrade controller
     upgradeController(Kernel, room, data, distribution);
@@ -386,7 +610,7 @@ export function taskEnded(Kernel: KernelType, taskId: TaskId): void {
     switch (task.type) {
         case TaskTypes.BUILD:
         case TaskTypes.PROVISION:
-        case TaskTypes.BUILD:
+        case TaskTypes.UPGRADE:
             removeEnergyNeed(task.source);
     }
 }
