@@ -9,7 +9,8 @@ import type { Task, TaskMeta, TaskHolder,
               ProvisionTask, SourceTarget, EnergyTargetSpawn, EnergyTarget,
               UpgradeTask, EnergyTargetController,
               TaskStepResult, TaskStep,
-              TaskBuild, EnergyTargetConstruction } from "../types/FooTypes.js";
+              TaskBuild, EnergyTargetConstruction,
+              SourceTargetFixed, SourceTargetAny} from "../types/FooTypes.js";
 
 import { TaskPriorities, TaskTypes, TaskStates, SourceTargets, EnergyTargetTypes,
          TaskStepTypes } from "../src/consts.js";
@@ -51,13 +52,13 @@ const validSource : SourceTarget = {
     energyNeed: 100
 }
 
-const otherRoomSource : SourceTarget = {
+const otherRoomSource : SourceTargetAny = {
     type: SourceTargets.ANY,
     room: otherRoomName,
     energyNeed: 100
 }
 
-const fixedSource : SourceTarget = {
+const fixedSource : SourceTargetFixed = {
     type: SourceTargets.FIXED,
     room: validRoomName,
     id: "test-source-fixed-1",
@@ -230,6 +231,7 @@ const validPlanner: PlannerMemory = {
 
 const validMilestones: MilestoneMemory = {
     cradle: undefined,
+    respawnTime: 1,
     gclLevel: {},
     spawnRclLevel: {},
     spawnCapacity: {},
@@ -240,7 +242,6 @@ const validMemory: OwnMemory = {
     initialized: true,
     version: 1,
     finished: true,
-    respawnTime: 1,
     stats: validStats,
     monitoring: validMonitoring,
     kernel: validKernel,

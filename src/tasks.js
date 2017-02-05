@@ -10,6 +10,7 @@ import type { Tick, TaskPrio, Task, TaskStepType, TaskState,
               UpgradeTask, EnergyTargetController,
               TaskBuild, EnergyTargetConstruction,
               TaskMine,
+              TaskRepair, EnergyTargetRepairable,
               TaskStep, TaskStepNavigate, TaskStepHarvest, TaskStepTransfer, TaskStepUpgrade,
               TaskMemory,
               Position } from "../types/FooTypes.js";
@@ -76,6 +77,19 @@ export function constructMine(now: Tick, prio: TaskPrio, spawnTime: Tick, source
     }
 }
 
+export function constructRepair(now: Tick, prio: TaskPrio, source: SourceTarget, target: EnergyTargetRepairable): TaskRepair {
+    return {
+        type: TaskTypes.REPAIR,
+        assignedRoom: target.room,
+        source,
+        target,
+        created: now,
+        updated: now,
+        prio,
+        spawn: "variable"
+    }
+}
+
 export function findNavigationTargetById(id: ObjectId): ?RoomPosition {
     const obj : ?RoomObject = Game.getObjectById(id);
     if (!obj) {
@@ -113,9 +127,10 @@ export function constructMoveStep(position: Position, roomName: RoomName, ignore
     });
 }
 
-export function constructHarvestSourceStep(sourceId: SourceId, defaults: Object): TaskStep {
+export function constructHarvestSourceStep(sourceId: SourceId, mine: boolean, defaults: Object): TaskStep {
     return constructStep(TaskStepTypes.HARVEST, defaults, {
-        sourceId
+        sourceId,
+        mine
     });
 }
 
@@ -137,9 +152,21 @@ export function constructStepBuild(targetId: ObjectId, defaults: Object): TaskSt
     });
 }
 
+export function constructStepRepair(targetId: ObjectId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.REPAIR, defaults, {
+        targetId
+    });
+}
+
 export function constructPickupStep(resourceId: ResourceId, defaults: Object): TaskStep {
     return constructStep(TaskStepTypes.PICKUP, defaults, {
         resourceId
+    });
+}
+
+export function constructWithdrawStep(targetId: StructureId, defaults: Object): TaskStep {
+    return constructStep(TaskStepTypes.WITHDRAW, defaults, {
+        targetId
     });
 }
 
@@ -168,22 +195,42 @@ export function getSourceIdForTarget(source: SourceTarget, currentPosition: Room
 
 type AquireEnergyFunc = (sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory) => TaskStep;
 
-export function mineStep(task: TaskMine, creep: Creep, init: boolean, memory: TaskMemory) {
-    const source : SourceTarget = task.source;
-    const currentPosition : RoomPosition = creep.pos;
-    const f : AquireEnergyFunc = (sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory) => {
-        const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
-        if (!adjacent) {
+export function miningFunction(sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory): TaskStep {
+
+    //check container
+    const containers : Container[] = sourcePosition.findInRange(FIND_STRUCTURES, 1, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);
+    const container : ?Container = _.head(containers);
+    if(container) {
+        debug("[tasks] [mining] found container " + container.id);
+        const onTop : boolean = currentPosition.x === container.pos.x && currentPosition.y === container.pos.y ;
+        if (!onTop) {
+            debug("[tasks] [mining] moving to container" + container.id);
             const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
                                           !memory.lastResult.success)
             if (moveFailed) {
-                warn(`[tasks] [mine] [$creep.name] moving failed, sidestepping`);
+                warn(`[tasks] [mining] moving failed, sidestepping`);
             }
-            return constructMoveStep(sourcePosition, sourcePosition.roomName, !moveFailed, {init, final: false});
+            return constructMoveStep(container.pos, container.pos.roomName, !moveFailed, {init, final: false});
         }
-        return constructHarvestSourceStep(sourceId, {init, final: false});
     }
-    return withPositionAtSource(source, currentPosition, init, memory, f);
+
+    const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
+    if (!adjacent) {
+        const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
+                                      !memory.lastResult.success)
+        if (moveFailed) {
+            warn(`[tasks] [mine] [$creep.name] moving failed, sidestepping`);
+        }
+        return constructMoveStep(sourcePosition, sourcePosition.roomName, !moveFailed, {init, final: false});
+    }
+    return constructHarvestSourceStep(sourceId, true, {init, final: false});
+}
+
+
+export function mineStep(task: TaskMine, creep: Creep, init: boolean, memory: TaskMemory) {
+    const source : SourceTarget = task.source;
+    const currentPosition : RoomPosition = creep.pos;
+    return withPositionAtSource(source, currentPosition, init, memory, miningFunction);
 }
 
 export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomPosition, currentPosition: RoomPosition, init: boolean, memory: TaskMemory): TaskStep {
@@ -204,8 +251,22 @@ export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomP
     }
 
     //check container
-    /* const energyPosition : Position = currentPosition.findInRange(FIND_MY_STRUCTURES, 1, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);*/
-
+    const containers : Container[] = sourcePosition.findInRange(FIND_STRUCTURES, 1, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);
+    const container : ?Container = _.head(containers);
+    if(container && container.store[RESOURCE_ENERGY] > 0) {
+        const adjacent : boolean = currentPosition.inRangeTo(container.pos, 1);
+        if (!adjacent) {
+            debug(`[tasks] [aquire] move to ${container.id}`);
+            const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
+                                          !memory.lastResult.success)
+            if (moveFailed) {
+                warn(`[tasks] [aquire] moving failed, sidestepping`);
+            }
+            return constructMoveStep(container.pos, container.pos.roomName, !moveFailed, {init, final: false});
+        }
+        debug(`[tasks] [aquire] withdraw from ${container.id}`);
+        return constructWithdrawStep(container.id, {init, final: false});
+    }
 
     const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
     if (!adjacent) {
@@ -216,7 +277,7 @@ export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomP
         }
         return constructMoveStep(sourcePosition, sourcePosition.roomName, moveFailed, {init, final: false});
     }
-    return constructHarvestSourceStep(sourceId, {init, final: false});
+    return constructHarvestSourceStep(sourceId, false, {init, final: false});
 }
 
 
@@ -301,6 +362,12 @@ export function energyTransmission(
 
 export function provisioningStep(task: ProvisionTask, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
     return energyTransmission(task, creep, init, memory, 1, (taskTarget: EnergyTarget, final: boolean) => {
+        const obj : ?Structure = Game.getObjectById(taskTarget.targetId);
+        const energy : any = (obj && obj.energy) || null;
+        const energyCapacity : any = (obj && obj.energyCapacity) || null;
+        if (!obj || (energy === energyCapacity)) {
+            return constructStep("NOOP", {}, {final: true, init});
+        }
         return constructStepTransfer(taskTarget.targetId, {final, init});
     });
 }
@@ -312,8 +379,18 @@ export function upgradeStep(task: UpgradeTask, creep: Creep, init: boolean, memo
 }
 
 export function buildStep(task: TaskBuild, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
-    return energyTransmission(task, creep, init, memory, 1, (taskTarget: EnergyTarget, final: boolean) => {
+    return energyTransmission(task, creep, init, memory, 3, (taskTarget: EnergyTarget, final: boolean) => {
         return constructStepBuild(taskTarget.targetId, {final, init});
+    });
+}
+
+export function repairStep(task: TaskRepair, creep: Creep, init: boolean, memory: TaskMemory): TaskStep {
+    return energyTransmission(task, creep, init, memory, 3, (taskTarget: EnergyTarget, final: boolean) => {
+        const obj : ?Structure = Game.getObjectById(taskTarget.targetId);
+        if (!obj || obj.hits === obj.hitsMax) {
+            return constructStep("NOOP", {}, {final: true, init});
+        }
+        return constructStepRepair(taskTarget.targetId, {final, init});
     });
 }
 
@@ -327,6 +404,9 @@ export function getNextStep(task: Task, creep: Creep, state: TaskState, memory: 
     }
     if (task.type === TaskTypes.BUILD) {
         return buildStep(task, creep, init, memory);
+    }
+    if (task.type === TaskTypes.REPAIR) {
+        return repairStep(task, creep, init, memory);
     }
     if (task.type === TaskTypes.MINE) {
         return mineStep(task, creep, init, memory);

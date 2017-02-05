@@ -5,10 +5,11 @@ import typeof * as Lodash from "lodash";
 declare var _ : Lodash;
 
 // types
-import type { CreepBody, FooMemory, Task, TaskId,
+import type { Tick,
+              CreepBody, FooMemory, Task, TaskId,
               TaskHolder, TaskState,
               SourceTarget, EnergyTargetSpawn, EnergyTargetController,
-              CreepMemory } from "../types/FooTypes.js";
+              CreepMemory, MilestoneMemory } from "../types/FooTypes.js";
 
 // API
 /* import Game from "./ApiGame";*/
@@ -114,27 +115,29 @@ export function processTasks(Kernel: KernelType, creep: Creep, Game: GameI) {
     // - claim
 }
 
-export function recordMilestones(Game: GameI, Memory: FooMemory) {
-    if (!Memory.milestones.cradle) {
-        Memory.milestones.cradle = _.keys(Game.rooms)[0];
+export function recordMilestones(Game: GameI, memory: FooMemory) {
+    const mem : MilestoneMemory = memory.milestones;
+    if (!mem.cradle) {
+        mem.cradle = _.keys(Game.rooms)[0];
     }
-    const cradleName : RoomName = Memory.milestones.cradle;
+    const time : Tick = Game.time - mem.respawnTime;
+    const cradleName : RoomName = mem.cradle;
     const cradle : Room = Game.rooms[cradleName];
-    if (!Memory.milestones.gclLevel[Game.gcl.level]) {
-        Memory.milestones.gclLevel[Game.gcl.level] = Game.time;
+    if (!mem.gclLevel[Game.gcl.level]) {
+        mem.gclLevel[Game.gcl.level] = Game.time;
     }
     const rcl : number = cradle.controller.level;
-    if (!Memory.milestones.spawnRclLevel[rcl]) {
-        Memory.milestones.spawnRclLevel[rcl] = Game.time;
+    if (!mem.spawnRclLevel[rcl]) {
+        mem.spawnRclLevel[rcl] = Game.time;
     }
     const capacity : number = cradle.energyCapacityAvailable;
     const max : number = ENERGY_CAPACITY_MAX[rcl];
-    if (!Memory.milestones.spawnCapacity[rcl] && capacity === max) {
-        Memory.milestones.spawnCapacity[rcl] = Game.time;
+    if (!mem.spawnCapacity[rcl] && capacity === max) {
+        mem.spawnCapacity[rcl] = Game.time;
     }
     const towerCount : number = _.size(Rooms.getTowers(cradle));
-    if (!Memory.milestones.towers[rcl] && towerCount === CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl]) {
-        Memory.milestones.towers[rcl] = Game.time;
+    if (!mem.towers[rcl] && towerCount === CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl]) {
+        mem.towers[rcl] = Game.time;
     }
 }
 

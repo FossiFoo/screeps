@@ -31,7 +31,6 @@ export function initializeMemory(mem: any | FooMemory, now: Tick): FooMemory {
         initialized: true,
         finished: false,
         version: 1,
-        respawnTime: now,
         stats: {
             time: 0,
             lastReport: 0,
@@ -58,6 +57,7 @@ export function initializeMemory(mem: any | FooMemory, now: Tick): FooMemory {
         },
         milestones: {
             cradle: null,
+            respawnTime: now,
             gclLevel: {},
             spawnRclLevel: {},
             spawnCapacity: {},

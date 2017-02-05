@@ -57,10 +57,6 @@ export function getSpawns(room: Room): Spawn[] {
 }
 
 export function getBase(room: Room): RoomPosition {
-    const storage : ?Storage = room.storage;
-    if (storage) {
-        return storage.pos;
-    }
     const spawn : Spawn = _.head(getSpawns(room));
     if (spawn) {
         return spawn.pos;
@@ -94,8 +90,25 @@ export function getExtensions(room: Room): Extension[] {
 
 export function getTowers(room: Room): Tower[] {
     const structures : Structure[] = room.find(FIND_MY_STRUCTURES);
-    const extensions : any[] = _.filter(structures, (s: Structure) => s.structureType === STRUCTURE_TOWER);
-    return extensions;
+    const towers : any[] = _.filter(structures, (s: Structure) => s.structureType === STRUCTURE_TOWER);
+    return towers;
+}
+
+export function getStorage(room: Room): ?Storage {
+    const structures : Structure[] = room.find(FIND_MY_STRUCTURES);
+    const storage : ?any = _.find(structures, (s: Structure) => s.structureType === STRUCTURE_STORAGE);
+    return storage;
+}
+
+export function getRepairables(room: Room): Structure[] {
+    const structures : Structure[] = room.find(FIND_STRUCTURES);
+    const repairables : any[] = _.filter(structures, (s: Structure) => {
+        const isNoWall : boolean = s.structureType !== STRUCTURE_WALL;
+        const needsRepair : boolean = s.hits / s.hitsMax < 0.75;
+        return isNoWall && needsRepair;
+    });
+
+    return repairables;
 }
 
 export function calculatePathLength(room: Room, from: RoomPosition, to: RoomPosition) {
@@ -104,4 +117,9 @@ export function calculatePathLength(room: Room, from: RoomPosition, to: RoomPosi
         ignoreRoads: true
     });
     return _.size(path);
+}
+
+export function getHostiles(room: Room): Creep[] {
+    const creeps : Creep[] = room.find(FIND_HOSTILE_CREEPS);
+    return creeps;
 }

@@ -69,8 +69,8 @@ export function designAffordableWorker(maxEnergy: EnergyUnit): ?CreepBody {
 }
 
 export function designAffordableMiner(maxEnergy: EnergyUnit): ?CreepBody {
-    const maxWork : number = maxEnergy - BODYPART_COST["move"];
-    const maxPartsWork : number = Math.floor(maxWork / (BODYPART_COST["work"]));
+    const maxWork : number = maxEnergy - BODYPART_COST[MOVE];
+    const maxPartsWork : number = Math.floor(maxWork / (BODYPART_COST[WORK]));
     const partsWork : number = Math.min(maxPartsWork, 5);
     if (partsWork < 2) {
         return null;
@@ -80,6 +80,14 @@ export function designAffordableMiner(maxEnergy: EnergyUnit): ?CreepBody {
     for(let i:number = 0; i < partsWork; i++) {
         body.push(WORK);
     }
+
+    const cost : number = BODYPART_COST[MOVE] + BODYPART_COST[WORK] * partsWork;
+    const rest : number = maxEnergy - cost;
+
+    if (partsWork === 5 && rest >= BODYPART_COST[CARRY]) {
+        body.push(CARRY);
+    }
+
     return body;
 }
 
@@ -87,6 +95,7 @@ export function designCreepForEnergy(taskType: TaskType, maxEnergy: EnergyUnit):
     switch (taskType) {
         case TaskTypes.UPGRADE:
         case TaskTypes.BUILD:
+        case TaskTypes.REPAIR:
         case TaskTypes.PROVISION: {
             return designAffordableWorker(maxEnergy);
         }
@@ -94,7 +103,7 @@ export function designCreepForEnergy(taskType: TaskType, maxEnergy: EnergyUnit):
             return designAffordableMiner(maxEnergy);
         }
     }
-    error("[kernel] [population] task type not known " + taskType);
+    error("[bodyshop] [population] task type not known " + taskType);
     return null;
 }
 

@@ -20,18 +20,47 @@ const CONSTRUCTION_ROAD_FREQUENCY : number = 100;
 const CONSTRUCTION_ROAD_PERCENTAGE : number = 5;
 
 export function constructExtension(room: Room, base: RoomPosition, current: number, missing: number): void {
-    for (var i = current + 1; i <= current + missing; i++) {
-        const y : number = base.y + 2 + Math.floor((i - 1) / 6);
-        const x : number = base.x - ((i - 1) % 6) * 2 - (y % 2);
-        debug("generate extension at" +x + ":" +y);
+    let toBuild : number = missing;
+    let i : number = 1;
+    while (toBuild > 0) {
+        const y : YCoordinate = base.y + 2 + Math.floor((i - 1) / 6);
+        const x : XCoordinate = base.x - ((i - 1) % 6) * 2 - (y % 2);
+        info(`[architect] [extension] [${room.name}] construct ${i} of ${toBuild} at ${x}:${y}`);
         const err : number = room.createConstructionSite(x, y, STRUCTURE_EXTENSION);
-        if (err !== OK) {
-            error("[architect] cant construct extension: " + err);
+        if (err === OK) {
+            toBuild = toBuild - 1;
+        } else if (err === ERR_INVALID_TARGET) {
+            error(`[architect] [extension] [${room.name}] cant construct at ${x}/${y}`);
+        } else {
+            error(`[architect] [extension] [${room.name}] cant construct ${err}`);
+            return;
         }
+        i = i + 1;
+    }
+}
+
+export function constructTower(room: Room, base: RoomPosition, current: number, missing: number): void {
+    const x : XCoordinate = base.x - 10;
+    const y : YCoordinate = base.y + (current % 2) * 13;
+    const err : number = room.createConstructionSite(x, y, STRUCTURE_TOWER);
+    info(`[architect] [tower] [${room.name}] construct at ${x}:${y}`);
+    if (err !== OK) {
+        error(`[architect] [tower] [${room.name}] cant construct ${err}`);
+    }
+}
+
+export function constructStorage(room: Room, base: RoomPosition): void {
+    const x : XCoordinate = base.x;
+    const y : YCoordinate = base.y + 13;
+    const err : number = room.createConstructionSite(x, y, STRUCTURE_STORAGE);
+    info(`[architect] [storage] [${room.name}] construct at ${x}:${y}`);
+    if (err !== OK) {
+        error(`[architect] [storage] [${room.name}] cant construct ${err}`);
     }
 }
 
 export function constructRoadCell(room: Room, cell: TerrainUsageCell) {
+    debug(cell.x + "/" + cell.y + ": has " + cell.count);
     const things : LookAtResult[] = room.lookAt(cell.x, cell.y);
     const hasConstructionSites : boolean = _.some(things, (l) => l.type === LOOK_CONSTRUCTION_SITES);
     if (things.constructionSite) {
@@ -58,6 +87,26 @@ export function constructRoads(room: Room): void {
         }
     });
     Rooms.clearTerrainUsage(room);
+}
+
+export function constructContainers(room: Room): void {
+    const sources : Source[] = Rooms.getSources(room);
+    for (let source of sources) {
+        const sourcePosition : RoomPosition = source.pos;
+        const containers : Container[] = sourcePosition.findInRange(FIND_STRUCTURES, 1, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);
+        if (_.isEmpty(containers)) {
+            const constructions : ConstructionSite[] = _.filter(Rooms.getConstructionSites(room), (s: ConstructionSite) => s.structureType === STRUCTURE_CONTAINER);
+            if (_.isEmpty(constructions)){
+                const creeps : RoomObject[] = sourcePosition.findInRange(FIND_MY_CREEPS, 1);
+                const creep : ?RoomObject = _.head(creeps);
+                if (creep) {
+                    const pos : RoomPosition = creep.pos;
+                    info(`[architect] [container] [${room.name}] constructing at ${pos.x}:${pos.y}`);
+                    room.createConstructionSite(creep.pos, STRUCTURE_CONTAINER);
+                }
+            }
+        }
+    }
 }
 
 export function getBaseArea(room: Room, base: RoomPosition): LookAtResultMatrix {
@@ -87,11 +136,29 @@ export function constructBase(room: Room, data: PlanningRoomData, bootup: boolea
     if (missingExtensions > 0) {
         constructExtension(room, base, extensionCount + extensionSiteCount, missingExtensions);
     }
+
+    const towerCount : number = _.size(Rooms.getTowers(room));
+    const towerSites : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_TOWER);
+    const towerSiteCount : number = _.size(towerSites);
+    const missingTowers : number = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl] - (towerCount + towerSiteCount);
+    if (missingTowers > 0) {
+        constructTower(room, base, towerCount + towerSiteCount, missingTowers);
+    }
+
     if (!bootup && Game.time % CONSTRUCTION_ROAD_FREQUENCY === 0) {
         constructRoads(room);
     }
+    if (!bootup) {
+        constructContainers(room);
+        if (room.controller.level >= 4) {
+            const storage : ?Storage = Rooms.getStorage(room);
+            if (!storage) {
+                constructStorage(room, base);
+            }
+        }
+    }
+
     if (bootup) {
         Rooms.clearTerrainUsage(room);
     }
-    const towerCount : number = _.size(Rooms.getTowers(room));
 }

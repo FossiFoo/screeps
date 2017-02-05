@@ -46,20 +46,20 @@ Todo
 https://en.wikipedia.org/wiki/Multilevel_feedback_queue
 a combination of fixed-priority preemptive scheduling, round-robin, and first in, first out algorithms. In this system, threads can dynamically increase or decrease in priority depending on if it has been serviced already, or if it has been waiting extensively. Every priority level is represented by its own queue, with round-robin scheduling among the high-priority threads and FIFO among the lower-priority ones. In this sense, response time is short for most threads, and short but critical system threads get completed very quickly.
 
+- tower code
+- repair things
 
 - remember last action and outcome
 - transfer energy to other target if close
 
 - suicide miner if replacement arrived???
-- container mine (when?)
 - hauler?
 - pickup on the way
 
-- repair broken creep: don't move
+- fix broken creep: don't move
 - if source any, pick a target and stay with it?
 
 - planner: assign sources according to plan
-
 - reassign new task according to old job
 - statistics about task
 
@@ -163,11 +163,11 @@ PB Times
 sim, [24/20]
 
 RCL 2:  396
-1. EX: 1202             801
+1. EX: 1188             801
 2. EX: 1650             448
-3. EX: 2247             597
-4. EX: 2753             506
-5. EX: 3380             627
+3. EX: 2130             480
+4. EX: 2630             500
+5. EX: 3260             627
 + 2948 RCL
 
 RCL 3: 17253

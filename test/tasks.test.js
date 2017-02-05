@@ -68,8 +68,8 @@ it('should construct steps to move to a source', function() {
 });
 
 it('should construct steps to harvest a source', function() {
-    const step : TaskStep = dut.constructHarvestSourceStep("test-SourceId", {});
-    expect(step).toMatchObject({type: "HARVEST", sourceId: "test-SourceId"});
+    const step : TaskStep = dut.constructHarvestSourceStep("test-SourceId", true, {});
+    expect(step).toMatchObject({type: "HARVEST", sourceId: "test-SourceId", mine: true});
 });
 
 it('should construct steps to transfer a source', function() {
@@ -210,7 +210,8 @@ it('should generate harvest step when close to ANY source', function() {
 
     const creep : Creep = Game.creeps["Leo"];
     positionMock.findClosestByPath.mockReturnValue({pos: positionMock, id: "SourceId"});
-    positionMock.findInRange.mockReturnValue([{id: "SourceId"}]);
+    positionMock.findInRange.mockReturnValueOnce([]);
+    positionMock.findInRange.mockReturnValueOnce([{id: "SourceId"}]);
     positionMock.inRangeTo.mockReturnValue(true);
     positionMock.roomName = "N0W0";
     positionMock.x = 1;
@@ -340,4 +341,19 @@ it('should return with noop if source not found', function() {
     const step : TaskStep = dut.aquireEnergy(Sources.fixed, positionMock, true, Memories.validTaskMemory);
 
     expect(step).toMatchObject({type: "NOOP", final: true});
+});
+
+fit('should move to container when mining', function() {
+    const positionMock : RoomPosition = (new RoomPositionMock(1, 2, "N0W0"): any);
+    positionMock.findInRange.mockReturnValueOnce([{structureType: STRUCTURE_CONTAINER, pos: {x:1, y:2}}]);
+    positionMock.inRangeTo.mockReturnValueOnce(true);
+
+    const GameMock : GameMock = ((Game: any): GameMock);
+    GameMock.setGetObjectByIdReturnValue(null);
+
+    dut.init(GameMock, Memory);
+    const fixedSource = Sources.fixed;
+    const step : TaskStep = dut.miningFunction(fixedSource.id, positionMock, positionMock, true, Memories.validTaskMemory);
+
+    expect(step).toMatchObject({type: "NAVIGATE", final: false});
 });

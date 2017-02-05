@@ -2,8 +2,9 @@
 
 import { TaskStates, TaskTypes, TaskStepTypes, CREEP_MEMORY_VERSION, CreepStates, EnergyTargetTypes } from "../src/consts.js";
 import type { SourceFixed, SourceAny,
-              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild, TaskTypeMine,
-              EnergyTargetTypeSpawn, EnergyTargetTypeController, EnergyTargetTypeConstruction,
+              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild, TaskTypeMine, TaskTypeRepair,
+              EnergyTargetTypeSpawn, EnergyTargetTypeController,
+              EnergyTargetTypeTower, EnergyTargetTypeRepairable, EnergyTargetTypeConstruction,
               CreepMemoryVersion, RoomMemoryVersion } from "../types/ConstTypes.js";
 
 export type Tick = number;
@@ -95,6 +96,7 @@ export type PlannerMemory = {
 
 export type MilestoneMemory = {
     cradle: ?RoomName,
+    respawnTime: Tick,
     gclLevel: {[level: number]: Tick},
     spawnRclLevel: {[level: number]: Tick},
     spawnCapacity: {[amount: number]: Tick},
@@ -105,7 +107,6 @@ export type OwnMemory = {
     initialized: true,
     version: number,
     finished: boolean,
-    respawnTime: Tick,
     stats: StatsMemory,
     monitoring: MonitoringMemory,
     kernel: KernelMemory,
@@ -156,13 +157,21 @@ export type EnergyTargetConstruction = {
     type: EnergyTargetTypeConstruction;
 } & EnergyTargetBase;
 
+export type EnergyTargetTower = {
+    type: EnergyTargetTypeTower;
+} & EnergyTargetBase;
+
+export type EnergyTargetRepairable = {
+    type: EnergyTargetTypeRepairable;
+} & EnergyTargetBase;
+
 export type EnergyTargetBase = {
     room: RoomName;
     targetId: ObjectId;
     energyNeed: EnergyUnit;
 };
 
-export type EnergyTarget =  EnergyTargetSpawn | EnergyTargetController | EnergyTargetConstruction;
+export type EnergyTarget =  EnergyTargetSpawn | EnergyTargetTower | EnergyTargetController | EnergyTargetConstruction | EnergyTargetRepairable;
 
 export type ProvisionTask = {
     type: TaskTypeProvision;
@@ -174,6 +183,10 @@ export type UpgradeTask = {
 
 export type TaskBuild = {
     type: TaskTypeBuild;
+} & TaskEnergyTransmission;
+
+export type TaskRepair = {
+    type: TaskTypeRepair;
 } & TaskEnergyTransmission;
 
 export type TaskEnergyTransmission = {
@@ -202,7 +215,7 @@ export type TaskBase = {
     prio: TaskPrio;
 };
 
-export type Task = ProvisionTask | UpgradeTask | TaskBuild | TaskMine;
+export type Task = ProvisionTask | UpgradeTask | TaskBuild | TaskMine | TaskRepair;
 
 export type TaskId = string;
 
@@ -257,8 +270,9 @@ export type TaskStepNavigate = {
 } & TaskStep;
 
 export type TaskStepHarvest = {
-    type: "HARVEST",
-    sourceId: SourceId
+    type: "HARVEST";
+    sourceId: SourceId;
+    mine: boolean;
 } & TaskStep;
 
 export type TaskStepTransfer = {
@@ -276,9 +290,19 @@ export type TaskStepBuild = {
     targetId: ObjectId
 } & TaskStep;
 
+export type TaskStepRepair = {
+    type: "REPAIR",
+    targetId: ObjectId
+} & TaskStep;
+
 export type TaskStepPickup = {
     type: "PICKUP",
     resourceId: ResourceId
+} & TaskStep;
+
+export type TaskStepWithdraw = {
+    type: "WITHDRAW",
+    targetId: StructureId
 } & TaskStep;
 
 export type TaskStepNoop = {

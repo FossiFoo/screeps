@@ -10,7 +10,9 @@ import type { Tick, FooMemory, PlannerMemory,
               PathMap, PathData,
               Task, TaskType, TaskId, TaskHolder, TaskState, TaskPrio,
               SourceTarget, EnergyTarget,
-              EnergyTargetSpawn, EnergyTargetController, EnergyTargetConstruction } from "../types/FooTypes.js";
+              ProvisionTask,
+              EnergyTargetSpawn, EnergyTargetTower, EnergyTargetRepairable,
+              EnergyTargetController, EnergyTargetConstruction } from "../types/FooTypes.js";
 
 import { error, warn, info, debug } from "./monitoring";
 
@@ -32,6 +34,17 @@ type PathForSource = {
 };
 
 export let memory: PlannerMemory;
+
+const DEFENCE_SCORES : {[type: string]: number} = {
+    attack: 100,
+    ranged_attack: 100,
+    claim: 70,
+    work: 50,
+    heal: 10,
+    move: 0,
+    carry: 0,
+    tough: 0
+};
 
 export function init(game: GameI, mem: FooMemory): void {
     memory = mem.planner;
@@ -254,6 +267,33 @@ export function bootup(Kernel: KernelType, room: Room, Game: GameI, bootup: bool
     Kernel.addTask(harvest);
 }
 
+export function fire(room: Room): void {
+    const hostiles : Creep[] = Rooms.getHostiles(room);
+    const towers : Tower[] = Rooms.getTowers(room);
+
+    if (_.isEmpty(hostiles) || _.isEmpty(towers)) {
+        debug(`[planner] [fire] [${room.name}] no towers or no hostiles`);
+        return;
+    }
+
+    const sortedTargets : Creep[] = _.sortBy(hostiles, (c: Creep): number => {
+        const targetScore : number = _.reduce(c.body, (r: number, b: BodyPartDefinition): number => {
+            const partType : BODYPART_TYPE = b.type;
+            return r + DEFENCE_SCORES[partType];
+        }, 0);
+        console.log(targetScore);
+        return targetScore;
+    });
+
+    for (let tower of towers) {
+        const target : Creep = _.head(sortedTargets);
+        if (tower.energy === 0) {
+            console.log("NO ENERGY");
+        }
+        tower.attack(target);
+    }
+}
+
 export function calculateSpawnTime(s: PlanningSourceDistribution, paths: {[id: SourceId]: PathForSource}): Tick {
     const respawnTime : Tick = s.minerAssigned ? (s.minerAssigned + CREEP_LIFE_TIME) : 0;
     const path : ?PathForSource = paths[s.id];
@@ -359,7 +399,7 @@ export function refillSpawn(Kernel: KernelType, room: Room, data: PlanningRoomDa
     });
 
     const extensions : Extension[] = Rooms.getExtensions(room);
-    if (openTaskCount > Math.ceil(_.size(extensions) / 10)) {
+    if (openTaskCount > Math.ceil(1 + _.size(extensions) / 5)) {
         debug("[planner] [" + room.name + "] [refill] has enough pending refill jobs");
         return;
     }
@@ -389,6 +429,121 @@ export function refillSpawn(Kernel: KernelType, room: Room, data: PlanningRoomDa
     Kernel.addTask(harvest);
 }
 
+export function refillTower(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution, bootup: boolean): void {
+
+    if (bootup) {
+        return;
+    }
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        const task : Task = holder.task;
+        const isProvision : boolean = task.type === TaskTypes.PROVISION;
+        if (!isProvision) {
+            return false;
+        }
+        const provisionTask : ProvisionTask = (task: any);
+        return provisionTask.target.type === EnergyTargetTypes.TOWER &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING);
+    });
+
+    const towers : Tower[] = Rooms.getTowers(room);
+    if (openTaskCount >= _.size(towers)) {
+        debug("[planner] [" + room.name + "] [refill] has enough pending refill jobs");
+        return;
+    }
+
+    const sortedTowers : Tower[] = _.sortBy(towers, (t: Tower): number => t.energy);
+    const tower : ?Tower = _.head(sortedTowers);
+    if (!tower) {
+        debug(`[planner] [tower] no tower found`);
+        return;
+    }
+    const energyNeed = tower.energyCapacity - tower.energy;
+
+    if (energyNeed === 0) {
+        debug(`[planner] [tower] all towers full`);
+        return;
+    }
+
+    const target : EnergyTargetTower = {
+        room: room.name,
+        type: EnergyTargetTypes.TOWER,
+        targetId: tower.id,
+        energyNeed
+    }
+
+    let prio : TaskPrio = TaskPriorities.UPKEEP;
+
+    const source : SourceTarget = determineSource(room, data, distribution, target.energyNeed, prio, TaskTypes.UPGRADE);
+
+    const runningTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.PROVISION &&
+               state === TaskStates.RUNNING;
+    });
+
+    prio = (runningTaskCount === 0 || energyNeed > tower.energyCapacity / 2) ? TaskPriorities.URGENT : prio;
+    if (runningTaskCount === 0) {
+        warn(`[planner] [${room.name}] [refill] no provisioning found, adding URGENT task`);
+    }
+    const provision : Task = Tasks.constructProvisioning(Game.time, prio, source, target);
+
+    Kernel.addTask(provision);
+}
+
+export function repair(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution, bootup: boolean): void {
+
+    if (bootup) {
+        return;
+    }
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        const task : Task = holder.task;
+        const isRepair : boolean = task.type === TaskTypes.REPAIR;
+        if (!isRepair) {
+            return false;
+        }
+        return (state === TaskStates.WAITING || state === TaskStates.RUNNING);
+    });
+
+    const repairables : Structure[] = Rooms.getRepairables(room);
+    if (openTaskCount >= _.size(repairables)) {
+        debug(`[planner] [${room.name}] [repair] has enough pending repair jobs`);
+        return;
+    }
+
+    const sortedRepairables : Structure[] = _.sortBy(repairables, (t: Structure): number => (t.hitsMax - t.hits) / t.hitsMax);
+    const repairable : ?Structure = _.head(sortedRepairables);
+    if (!repairable) {
+        debug(`[planner] [${room.name}] [repair] no repairables found`);
+        return;
+    }
+    const energyNeed = repairable.hitsMax - repairable.hits;
+
+    if (energyNeed === 0) {
+        warn(`[planner] [${room.name}] [repair] repairable already fixed?`);
+        return;
+    }
+
+    const target : EnergyTargetRepairable = {
+        room: room.name,
+        type: EnergyTargetTypes.REPAIRABLE,
+        targetId: repairable.id,
+        energyNeed
+    }
+
+    let prio : TaskPrio = TaskPriorities.UPKEEP;
+
+    const source : SourceTarget = determineSource(room, data, distribution, target.energyNeed, prio, TaskTypes.UPGRADE);
+    const repair : Task = Tasks.constructRepair(Game.time, prio, source, target);
+
+    Kernel.addTask(repair);
+}
+
 export function generateLocalPriorityTasks(Kernel: KernelType, room: Room, Game: GameI): void {
 
     if (!room.controller.my) {
@@ -408,6 +563,7 @@ export function generateLocalPriorityTasks(Kernel: KernelType, room: Room, Game:
     bootup(Kernel, room, Game, bootupMode);
     // -> defence -> fill turret, repair, build defender, all repair
     // -> turret action
+    fire(room);
 
     // === UPKEEP ===
     // construct tasks
@@ -416,9 +572,11 @@ export function generateLocalPriorityTasks(Kernel: KernelType, room: Room, Game:
     // - refill spawn
     // - refill extension
     refillSpawn(Kernel, room, data, distribution, bootupMode);
-    // - refill turret
+    // - refill tower
+    refillTower(Kernel, room, data, distribution, bootupMode);
     // - refill storage
     // - refill container
+    repair(Kernel, room, data, distribution, bootupMode);
 }
 
 export function upgradeController(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
@@ -493,6 +651,114 @@ export function buildExtension(Kernel: KernelType, room: Room, data: PlanningRoo
     Kernel.addTask(buildTask)
 }
 
+export function buildTower(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
+    const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
+    const towers : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_TOWER);
+    if (_.isEmpty(towers)) {
+        debug("[planner] [building] no towers found")
+        return;
+    }
+    const tower : ConstructionSite = _.head(towers);
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.BUILD &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
+    });
+
+    if (openTaskCount > 10 || openTaskCount > _.size(constructionSites) * 3) {
+        debug("[planner] [" + room.name + "] [improve] too many pending jobs " + openTaskCount);
+        return;
+    }
+
+    const prio : TaskPrio = TaskPriorities.UPGRADE;
+    const energyNeed : EnergyUnit = tower.progressTotal - tower.progress;
+    const source : SourceTarget = determineSource(room, data, distribution, energyNeed, prio, TaskTypes.BUILD);
+
+    const site : EnergyTargetConstruction = {
+        room: room.name,
+        type: EnergyTargetTypes.CONSTRUCTION,
+        targetId: tower.id,
+        energyNeed
+    }
+
+    const buildTask : Task = Tasks.constructBuild(Game.time, prio, source, site);
+    Kernel.addTask(buildTask)
+}
+
+export function buildStorage(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
+    const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
+    const storages : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_STORAGE);
+    if (_.isEmpty(storages)) {
+        debug("[planner] [building] no storages found")
+        return;
+    }
+    const storage : ConstructionSite = _.head(storages);
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.BUILD &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
+    });
+
+    if (openTaskCount > 10 || openTaskCount > _.size(constructionSites) * 3) {
+        debug("[planner] [" + room.name + "] [improve] too many pending jobs " + openTaskCount);
+        return;
+    }
+
+    const prio : TaskPrio = TaskPriorities.UPKEEP;
+    const energyNeed : EnergyUnit = storage.progressTotal - storage.progress;
+    const source : SourceTarget = determineSource(room, data, distribution, energyNeed, prio, TaskTypes.BUILD);
+
+    const site : EnergyTargetConstruction = {
+        room: room.name,
+        type: EnergyTargetTypes.CONSTRUCTION,
+        targetId: storage.id,
+        energyNeed
+    }
+
+    const buildTask : Task = Tasks.constructBuild(Game.time, prio, source, site);
+    Kernel.addTask(buildTask)
+}
+
+export function buildContainer(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
+    const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
+    const containers : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_CONTAINER);
+    if (_.isEmpty(containers)) {
+        debug("[planner] [building] no containers found")
+        return;
+    }
+    const container : ConstructionSite = _.head(containers);
+
+    // FIXME check better
+    const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
+        const state : TaskState = holder.meta.state;
+        return holder.task.type === TaskTypes.BUILD &&
+               (state === TaskStates.WAITING || state === TaskStates.RUNNING) ;
+    });
+
+    if (openTaskCount > 10 || openTaskCount > _.size(constructionSites) * 3) {
+        debug("[planner] [" + room.name + "] [improve] too many pending jobs " + openTaskCount);
+        return;
+    }
+
+    const prio : TaskPrio = TaskPriorities.UPGRADE;
+    const energyNeed : EnergyUnit = container.progressTotal - container.progress;
+    const source : SourceTarget = determineSource(room, data, distribution, energyNeed, prio, TaskTypes.BUILD);
+
+    const site : EnergyTargetConstruction = {
+        room: room.name,
+        type: EnergyTargetTypes.CONSTRUCTION,
+        targetId: container.id,
+        energyNeed
+    }
+
+    const buildTask : Task = Tasks.constructBuild(Game.time, prio, source, site);
+    Kernel.addTask(buildTask)
+}
+
 export function getRoomData(room: Room): PlanningRoomData {
     // reduce by creep cost (measure?)
     const sources : Source[] = Rooms.getSources(room);
@@ -525,13 +791,19 @@ export function getCurrentEnergyDistribution(): PlanningEnergyDistribution {
 export function buildRoads(Kernel: KernelType, room: Room, data: PlanningRoomData, distribution: PlanningEnergyDistribution): void {
 
     const constructionSites : ConstructionSite[] = Rooms.getConstructionSites(room);
-    const extensions : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_ROAD);
-    if (_.isEmpty(extensions)) {
-        debug("[planner] [building] no extensions found")
+    const roads : ConstructionSite[] = _.filter(constructionSites, (s: ConstructionSite) => s.structureType === STRUCTURE_ROAD);
+    if (_.isEmpty(roads)) {
+        debug("[planner] [building] no roads found")
         return;
     }
-    const sortedExtensions = _.sortBy(extensions, (c: ConstructionSite) => c.progressTotal - c.progress);
-    const extension : ConstructionSite = _.head(sortedExtensions);
+
+    const base : RoomPosition = Rooms.getBase(room);
+    const sortedRoads = _.sortBy(roads, (c: ConstructionSite) => {
+        const p : number = 100 - (c.progress / c.progressTotal * 100);
+        const r : number = c.pos.getRangeTo(base.x, base.y);
+        return p + r;
+    });
+    const road : ConstructionSite = _.head(sortedRoads);
 
     // FIXME check better
     const openTaskCount : number = Kernel.getLocalCount(room.name, (holder: TaskHolder) => {
@@ -553,13 +825,13 @@ export function buildRoads(Kernel: KernelType, room: Room, data: PlanningRoomDat
     });
 
     const prio : TaskPrio = prioTaskCount > 5 ? TaskPriorities.IDLE : TaskPriorities.UPGRADE;
-    const energyNeed : EnergyUnit = extension.progressTotal - extension.progress;
+    const energyNeed : EnergyUnit = road.progressTotal - road.progress;
     const source : SourceTarget = determineSource(room, data, distribution, energyNeed, prio, TaskTypes.BUILD);
 
     const site : EnergyTargetConstruction = {
         room: room.name,
         type: EnergyTargetTypes.CONSTRUCTION,
-        targetId: extension.id,
+        targetId: road.id,
         energyNeed
     }
 
@@ -589,8 +861,11 @@ export function generateLocalImprovementTasks(Kernel: KernelType, room: Room, Ga
     // - build extension
     buildExtension(Kernel, room, data, distribution);
     // - build container
-    // - build turret
+    buildContainer(Kernel, room, data, distribution);
+    // - build tower
+    buildTower(Kernel, room, data, distribution);
     // - build storage
+    buildStorage(Kernel, room, data, distribution);
     // - build some road
     buildRoads(Kernel, room, data, distribution);
     // - build some wall

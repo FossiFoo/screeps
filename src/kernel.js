@@ -118,6 +118,7 @@ export function matchesCreep(creep: Creep, task: Task): boolean {
     switch(task.type) {
         case TaskTypes.UPGRADE:
         case TaskTypes.BUILD:
+        case TaskTypes.REPAIR:
         case TaskTypes.PROVISION: {
             if(!hasParts(creep, {"move": 1, "work": 1, "carry": 1})) {
                 return false;

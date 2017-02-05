@@ -1,8 +1,9 @@
 /* @flow */
 
 import type { SourceAny, SourceFixed,
-              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild, TaskTypeMine,
-              EnergyTargetTypeSpawn, EnergyTargetTypeController, EnergyTargetTypeConstruction,
+              TaskTypeProvision, TaskTypeUpgrade, TaskTypeBuild, TaskTypeMine, TaskTypeRepair,
+              EnergyTargetTypeSpawn, EnergyTargetTypeTower,
+              EnergyTargetTypeController, EnergyTargetTypeConstruction, EnergyTargetTypeRepairable,
               CreepMemoryVersion, RoomMemoryVersion } from "../types/ConstTypes.js"
 
 export const CREEP_MEMORY_VERSION : CreepMemoryVersion = "0.0.1";
@@ -34,7 +35,8 @@ export const TaskTypes = {
     PROVISION: ("PROVISION": TaskTypeProvision),
     UPGRADE: ("UPGRADE": TaskTypeUpgrade),
     BUILD: ("BUILD": TaskTypeBuild),
-    MINE: ("MINE": TaskTypeMine)
+    MINE: ("MINE": TaskTypeMine),
+    REPAIR: ("REPAIR": TaskTypeRepair)
 }
 
 export const TaskStepTypes = {
@@ -44,7 +46,9 @@ export const TaskStepTypes = {
     TRANSFER: "TRANSFER",
     UPGRADE: "UPGRADE",
     BUILD: "BUILD",
-    PICKUP: "PICKUP"
+    REPAIR: "REPAIR",
+    PICKUP: "PICKUP",
+    WITHDRAW: "WITHDRAW"
 }
 
 export const SourceTargets = {
@@ -63,7 +67,9 @@ export const CreepStates = {
 export const EnergyTargetTypes = {
     SPAWN: ("SPAWN": EnergyTargetTypeSpawn),
     CONTROLLER: ("CONTROLLER": EnergyTargetTypeController),
-    CONSTRUCTION: ("CONSTRUCTION": EnergyTargetTypeConstruction)
+    CONSTRUCTION: ("CONSTRUCTION": EnergyTargetTypeConstruction),
+    TOWER: ("TOWER": EnergyTargetTypeTower),
+    REPAIRABLE: ("REPAIRABLE": EnergyTargetTypeRepairable),
 }
 
 export const ENERGY_CAPACITY_MAX = {

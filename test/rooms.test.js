@@ -78,7 +78,7 @@ it('should return extensions', function() {
     expect(room.find).toBeCalled();
 });
 
-it('should return storage as room center if exists', function() {
+xit('should return storage as room center if exists', function() {
     const room : Room = _.cloneDeep(Game.rooms["N0W0"]);
     room.storage = new StructureStorage();
     room.storage.pos = new RoomPositionMock(11, 22, "N0W0");

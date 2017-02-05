@@ -7,7 +7,9 @@ import type { Task, TaskId, TaskState, TaskPrio,
               TaskStepTransfer,
               TaskStepUpgrade,
               TaskStepBuild,
+              TaskStepRepair,
               TaskStepPickup,
+              TaskStepWithdraw,
               CreepBodyDefinitionByType,
               CreepMemory, CreepState } from "../types/FooTypes.js";
 
@@ -103,6 +105,15 @@ export function harvest(creep: Creep, stepParam: any): TaskStepResult {
         error("[creep] [" + creep.name + "] can't find source " + sourceId);
         return {error: "unknown object: " + sourceId};
     }
+    if (source.energy === 0 && step.mine) {
+        //FIXME repair container
+        const structures : Structure[] = creep.pos.lookFor(LOOK_STRUCTURES, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);
+        const container : ?Structure = _.head(structures);
+        if (container && container.hits < container.hitsMax) {
+            console.log("repairing container");
+            creep.repair(container);
+        }
+    }
     const result : CreepHarvestReturn = creep.harvest(source);
     if (result !== OK) {
         warn("[creep] [" + creep.name + "] can't harvest " + result);
@@ -156,7 +167,24 @@ export function build(creep: Creep, stepParam: any): TaskStepResult {
     }
     const result : CreepBuildReturn = creep.build(target);
     if (result !== OK) {
-        warn("[creep] [" + creep.name + "] can't upgrade " + result);
+        warn("[creep] [" + creep.name + "] can't build " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
+export function repair(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepRepair = stepParam;
+
+    const targetId : ObjectId = step.targetId;
+    const target : ?Structure = Game.getObjectById(targetId);
+    if (!target) {
+        error("[creep] [" + creep.name + "] can't find target " + targetId);
+        return {error: "unknown object: " + targetId};
+    }
+    const result : CreepRepairReturn = creep.repair(target);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't repair " + result);
         return {error: "" + result};
     }
     return {success: true};
@@ -179,13 +207,32 @@ export function pickup(creep: Creep, stepParam: any): TaskStepResult {
     return {success: true};
 }
 
+export function withdraw(creep: Creep, stepParam: any): TaskStepResult {
+    const step : TaskStepWithdraw = stepParam;
+
+    const targetId : StructureId = step.targetId;
+    const target : ?Structure = Game.getObjectById(targetId);
+    if (!target) {
+        error("[creep] [" + creep.name + "] can't find target " + targetId);
+        return {error: "unknown object: " + targetId};
+    }
+    const result : CreepWithdrawReturn = creep.withdraw(target, RESOURCE_ENERGY);
+    if (result !== OK) {
+        warn("[creep] [" + creep.name + "] can't withdraw " + result);
+        return {error: "" + result};
+    }
+    return {success: true};
+}
+
 const stepFunctions = {
     "NAVIGATE": navigate,
     "HARVEST": harvest,
     "TRANSFER": transfer,
     "UPGRADE": upgrade,
     "BUILD": build,
+    "REPAIR": repair,
     "PICKUP": pickup,
+    "WITHDRAW": withdraw,
     "NOOP": noop
 }
 
