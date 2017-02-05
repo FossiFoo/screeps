@@ -26,6 +26,12 @@ export function constructExtension(room: Room, base: RoomPosition, current: numb
         const y : YCoordinate = base.y + 2 + Math.floor((i - 1) / 6);
         const x : XCoordinate = base.x - ((i - 1) % 6) * 2 - (y % 2);
         info(`[architect] [extension] [${room.name}] construct ${i} of ${toBuild} at ${x}:${y}`);
+        const lookResult : LookAtResultWithPos[] = (room.lookAtArea(y - 1, x - 1, y + 1, x + 1, true): any);
+        const hasWalls : boolean = _.some(lookResult, (l: LookAtResultWithPos): boolean => l.type === LOOK_TERRAIN && l.terrain == "wall");
+        if (hasWalls) {
+            i = i + 1;
+            continue;
+        }
         const err : number = room.createConstructionSite(x, y, STRUCTURE_EXTENSION);
         if (err === OK) {
             toBuild = toBuild - 1;
