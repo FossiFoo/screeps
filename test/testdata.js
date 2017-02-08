@@ -137,6 +137,10 @@ export const validStep : TaskStepNavigate = {
             y: 1
         }
     },
+    currentPosition: {
+        x: 10,
+        y: 10
+    },
     init: true,
     final: false
 }

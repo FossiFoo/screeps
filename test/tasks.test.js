@@ -63,7 +63,7 @@ it('should get the next step for the task', function() {
 });
 
 it('should construct steps to move to a source', function() {
-    const step : TaskStep = dut.constructMoveStep({x: 3, y:4}, "N1W1", true, {});
+    const step : TaskStep = dut.constructMoveStep({x: 3, y:4}, "N1W1", {x: 3, y:4}, true, {});
     expect(step).toMatchObject({type: "NAVIGATE", destination:{position:{x:3, y:4}}});
 });
 

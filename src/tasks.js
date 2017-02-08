@@ -117,12 +117,13 @@ export function constructStep(type: TaskStepType, stepData: Object, defaults: Ob
     return _.assign({ type }, stepData, defaults);
 }
 
-export function constructMoveStep(position: Position, roomName: RoomName, ignoreCreeps: boolean, defaults: Object): TaskStep {
+export function constructMoveStep(position: Position, roomName: RoomName, currentPosition: Position, ignoreCreeps: boolean, defaults: Object): TaskStep {
     return constructStep(TaskStepTypes.NAVIGATE, defaults, {
         destination: {
             room: roomName,
             position
         },
+        currentPosition,
         ignoreCreeps
     });
 }
@@ -170,6 +171,28 @@ export function constructWithdrawStep(targetId: StructureId, defaults: Object): 
     });
 }
 
+export function lastMoveFailed(memory: TaskMemory, currentPosition: Position): boolean {
+    const lastStep : TaskStep = memory.lastStep;
+    if (lastStep.type !== TaskStepTypes.NAVIGATE) {
+        return false;
+    }
+    if (memory.lastResult.success) {
+        return true;
+    }
+    const moveStep : TaskStepNavigate = memory.lastStep;
+    const lastPosition: Position = moveStep.currentPosition;
+    return lastPosition.x !== currentPosition.x || lastPosition.y !== currentPosition.y;
+}
+
+export function calculateMoveStep(position: Position, roomName: RoomName, currentPosition: Position, memory: TaskMemory, defaults: Object): TaskStep {
+
+    const moveFailed : boolean = lastMoveFailed(memory, currentPosition);
+    if (moveFailed) {
+        warn(`[tasks] ${currentPosition.x}/${currentPosition.y} moving failed, sidestepping`);
+    }
+    return constructMoveStep(position, roomName, currentPosition, !moveFailed, defaults);
+}
+
 export function findNearestSourceTarget(currentPosition: RoomPosition, source: SourceTarget): ?RoomPosition {
     if (source.type === SourceTargets.FIXED) {
         const sourceId : SourceId = source.id;
@@ -205,23 +228,13 @@ export function miningFunction(sourceId: SourceId, sourcePosition: RoomPosition,
         const onTop : boolean = currentPosition.x === container.pos.x && currentPosition.y === container.pos.y ;
         if (!onTop) {
             debug("[tasks] [mining] moving to container" + container.id);
-            const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
-                                          !memory.lastResult.success)
-            if (moveFailed) {
-                warn(`[tasks] [mining] moving failed, sidestepping`);
-            }
-            return constructMoveStep(container.pos, container.pos.roomName, !moveFailed, {init, final: false});
+            return calculateMoveStep(container.pos, container.pos.roomName, currentPosition, memory, {init, final: false});
         }
     }
 
     const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
     if (!adjacent) {
-        const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
-                                      !memory.lastResult.success)
-        if (moveFailed) {
-            warn(`[tasks] [mine] [$creep.name] moving failed, sidestepping`);
-        }
-        return constructMoveStep(sourcePosition, sourcePosition.roomName, !moveFailed, {init, final: false});
+        return calculateMoveStep(sourcePosition, sourcePosition.roomName, currentPosition, memory, {init, final: false});
     }
     return constructHarvestSourceStep(sourceId, true, {init, final: false});
 }
@@ -240,12 +253,7 @@ export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomP
     if (energy) {
         const adjacent : boolean = currentPosition.inRangeTo(energy.pos, 1);
         if (!adjacent) {
-            const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
-                                          !memory.lastResult.success)
-            if (moveFailed) {
-                warn(`[tasks] [aquire] [$creep.name] moving failed, sidestepping`);
-            }
-            return constructMoveStep(energy.pos, energy.pos.roomName, !moveFailed, {init, final: false});
+            return calculateMoveStep(energy.pos, energy.pos.roomName, currentPosition, memory, {init, final: false});
         }
         return constructPickupStep(energy.id, {init, final: false});
     }
@@ -253,16 +261,11 @@ export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomP
     //check container
     const containers : Container[] = sourcePosition.findInRange(FIND_STRUCTURES, 1, (s: Structure) => s.structureType === STRUCTURE_CONTAINER);
     const container : ?Container = _.head(containers);
-    if(container && container.store[RESOURCE_ENERGY] > 0) {
+    if(container && container.store && container.store[RESOURCE_ENERGY] > 0) {
         const adjacent : boolean = currentPosition.inRangeTo(container.pos, 1);
         if (!adjacent) {
             debug(`[tasks] [aquire] move to ${container.id}`);
-            const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
-                                          !memory.lastResult.success)
-            if (moveFailed) {
-                warn(`[tasks] [aquire] moving failed, sidestepping`);
-            }
-            return constructMoveStep(container.pos, container.pos.roomName, !moveFailed, {init, final: false});
+            return calculateMoveStep(container.pos, container.pos.roomName, currentPosition, memory, {init, final: false});
         }
         debug(`[tasks] [aquire] withdraw from ${container.id}`);
         return constructWithdrawStep(container.id, {init, final: false});
@@ -270,12 +273,7 @@ export function aquireEnergyFromSource(sourceId: SourceId, sourcePosition: RoomP
 
     const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 1);
     if (!adjacent) {
-        const moveFailed : boolean = (memory.lastStep.type === TaskStepTypes.NAVIGATE &&
-                                      !memory.lastResult.success)
-        if (moveFailed) {
-            warn(`[tasks] [aquire] [$creep.name] moving failed, sidestepping`);
-        }
-        return constructMoveStep(sourcePosition, sourcePosition.roomName, moveFailed, {init, final: false});
+        return calculateMoveStep(sourcePosition, sourcePosition.roomName, currentPosition, memory, {init, final: false});
     }
     return constructHarvestSourceStep(sourceId, false, {init, final: false});
 }
@@ -291,12 +289,7 @@ export function withPositionAtSource(source: SourceTarget, currentPosition: Room
     const resources : Resource[] = currentPosition.findInRange(FIND_DROPPED_RESOURCES, 3);
     const adjacent : boolean = currentPosition.inRangeTo(sourcePosition, 2);
     if (!adjacent) {
-        const moveFailed : boolean = (memory.lastStep && memory.lastStep.type === TaskStepTypes.NAVIGATE &&
-                                      memory.lastResult && !memory.lastResult.success)
-        if (moveFailed) {
-            warn(`[tasks] [aquire] [$creep.name] moving failed, sidestepping`);
-        }
-        return constructMoveStep(sourcePosition, source.room, !moveFailed, {init, final: false});
+        return calculateMoveStep(sourcePosition, source.room, currentPosition, memory, {init, final: false});
     }
 
     const sourceId : ?SourceId = getSourceIdForTarget(source, currentPosition);
@@ -351,7 +344,7 @@ export function energyTransmission(
             return transmissionStep(taskTarget, false);
         }
 
-        return constructMoveStep(targetPosition, taskTarget.room, false, {init, final: false});
+        return calculateMoveStep(targetPosition, taskTarget.room, currentPosition, memory, {init, final: false});
     }
 
     const source : SourceTarget = task.source;
@@ -411,6 +404,6 @@ export function getNextStep(task: Task, creep: Creep, state: TaskState, memory: 
     if (task.type === TaskTypes.MINE) {
         return mineStep(task, creep, init, memory);
     }
-    warn("[tasks] [" + creep.name+ "] unknown task type " + task.type);
+    warn(`[tasks] [${creep.name}] unknown task type ${task.type}`);
     return constructStep("NOOP", {}, {final: true, init});
 }

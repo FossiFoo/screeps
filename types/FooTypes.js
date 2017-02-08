@@ -266,6 +266,7 @@ export type TaskStepNavigate = {
         room: RoomName,
         position: Position
     },
+    currentPosition: Position,
     ignoreCreeps?: boolean
 } & TaskStep;
 
